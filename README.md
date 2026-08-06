@@ -14,12 +14,12 @@ Here is a list of the hardware I am using for this build.
 | Component / Part | Purpose in Project | Qty | Status | Link / Info |
 | :--- | :--- | :---: | :--- | :--- |
 | **Worx Landroid M600 Plus** | Donor chassis (motors, wheels, floating shield for collision). | 1 | Owned | - |
-| **Raspberry Pi 4B** | The Brain. Runs ROS 2 (Nav2) and handles path planning. | 1 | Owned | - |
-| **ESP32** | Low-level controller. Reads Hall-sensors (collision) and commands VESCs. | 1 | To buy | - |
-| **Quectel LC29H** | RTK-GPS Modules for centimeter precision (1 for Base, 1 for Rover). | 2 | Ordered | [Insert Link] |
-| **EBYTE LoRa Module** | Wireless transmission of RTCM data from Base to Rover. | 2 | Ordered | [Insert Link] |
+| **Raspberry Pi 4B** | The Brain. Runs ROS 2 (Nav2) and handles path planning. | 1 | Planning | - |
+| **ESP32** | Low-level controller. Reads Hall-sensors (collision) and commands VESCs. | 1 | Planning | - |
+| **Quectel LC29H** | RTK-GPS Modules for centimeter precision (1 for Base, 1 for Rover). | 2 | Planning | [Insert Link] |
+| **EBYTE LoRa Module** | Wireless transmission of RTCM data from Base to Rover. | 2 | Planning | [Insert Link] |
 | **VESC / Motor Controllers** | Precise control of the drive and mower motors. | - | Planning | - |
-| **Mini560 Pro** | Buck converters to safely step down 6S battery power to 5V logic. | - | Ordered | - |
+| **Mini560 Pro** | Buck converters to safely step down 6S battery power to 5V logic. | - | Planning | - |
 
 
 ## 🗺️ Project Roadmap
