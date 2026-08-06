@@ -58,7 +58,7 @@ For now to keep things manageable, I have divided the build into logical phases:
 
 # 📐 Diagrams
 
-###🔌 Power Distribution (Power Bus)
+### 🔌 Power Distribution (Power Bus)
 
 Here is a diagram of the Power Distribution (changes may occur)
 ```
