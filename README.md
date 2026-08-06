@@ -9,18 +9,30 @@ I'll document the whole journey here. If you have a mower tearing up your lawn t
 
 ## 🛠️ Hardware & Components (Bill of Materials)
 
-Here is a list of the hardware I am using for this build. 
+Here is the complete overview of all components, controllers, and wiring used for the mower and the RTK base station.
 
-| Component / Part | Purpose in Project | Qty | Status | Link / Info |
-| :--- | :--- | :---: | :--- | :--- |
-| **Worx Landroid M600 Plus** | Donor chassis (motors, wheels, floating shield for collision). | 1 | Owned | - |
-| **Raspberry Pi 4B** | The Brain. Runs ROS 2 (Nav2) and handles path planning. | 1 | Planning | - |
-| **ESP32** | Low-level controller. Reads Hall-sensors (collision) and commands VESCs. | 1 | Planning | - |
-| **Quectel LC29H** | RTK-GPS Modules for centimeter precision (1 for Base, 1 for Rover). | 2 | Planning | [Insert Link] |
-| **EBYTE LoRa Module** | Wireless transmission of RTCM data from Base to Rover. | 2 | Planning | [Insert Link] |
-| **VESC / Motor Controllers** | Precise control of the drive and mower motors. | - | Planning | - |
-| **Mini560 Pro** | Buck converters to safely step down 6S battery power to 5V logic. | - | Planning | - |
-
+| Category | Component / Model | Qty | Est. Price | Purpose in Project | Link |
+| :--- | :--- | :---: | :---: | :--- | :--- |
+| **GNSS / RTK** | Quectel LC29H(BS) | 1 | 350 | Fixed base station module (generates RTCM3). | [Link]() |
+| **GNSS / RTK** | Quectel LC29H(DA) | 1 | 350 | Mounted in the rover for cm-precise positioning. | [Link]() |
+| **GNSS / RTK** | Harxon Helix HX-103B | 2 | 400 | L1/L5 Dual-Band antennas (1x Base, 1x Rover). | [Link]() |
+| **Communication** | EBYTE E32-900T20D-V8 | 2 | 160 | LoRa Transceiver (868/915 MHz transparent UART link). | [Link]() |
+| **Motor Control** | Autoro Single ESC V6.7 BLDC FOC | 1 | 750 | Controls the wheel motors.* | [Link]() |
+| **Motor Control** | Autoro Dual ESC V6.7 BLDC FOC | 1 | 450 | Controls the mower motor.* | [Link]() |
+| **Power & Logic** | PLR Mini560 / Pro | 2 | 14 | Steps down battery voltage (18-28V) to clean 5V/3.3V. | [Link]() |
+| **Power & Logic** | 230V to 5V USB Power Supply | 1 | 40 | Permanent power supply for the indoor base station. | [Link]() |
+| **Power** | YOUME 5200mAh LiPo 6S 22.2V XT60 | 1 | 290 | Main battery power for the robot. | [Link]() |
+| **Power & Logic** | Daly Smart BMS 60A | 1 | 175 | Battery Management System for safe charging/discharging. | [Link]() |
+| **Safety** | 40A Car Relay + Blade Fuse Holder | 1 | 40 | Hardware E-Stop (cuts main power when Worx shield is hit). | [Link]() |
+| **Cables & Plugs** | XT60 + 12-14 AWG Silicone Wire | 1 | 40 | High-current power distribution from battery to motors. | [Link]() |
+| **Cables & Plugs** | Dupont / JST Wires (24-26 AWG) | 1 | 25 | Signal lines and data connections (UART, TX/RX, I2C). | [Link]() |
+| **Enclosure** | IP65/IP67 Plastic Junction Box | 1 | 60 | Waterproof housing for the outdoor base station electronics. | [Link]() |
+| **Navigation** | Raspberry Pi 5 8MP IMX219 (77°) | 1 | 75 | Camera module used for visual navigation/obstacle detection. | [Link]() |
+| **Navigation** | VL53L5X V2 ToF Laser (8x8) | 2 | 130 | Time-of-Flight sensors for short-range obstacle avoidance. | [Link]() |
+| **Navigation** | BNO085 IMU | 1 | 100 | 9-axis motion sensor for accurate heading and odometry. | [Link]() |
+| **Logic** | ESP32 Microcontroller | 2 | - | Low-level hardware controller (VESC communication & sensors). | [Link]() |
+| **Logic** | Raspberry Pi 4B | 1 | - | The central brain running ROS 2 and Nav2. | [Link]() |
+| **Tools / Test** | CP2102 USB-to-UART Adapter | 1 | 30 | Used for initial PC configuration of GPS and LoRa modules. | [Link]() |
 
 ## 🗺️ Project Roadmap
 
