@@ -1,5 +1,5 @@
-# 🚧 Beta software 🚧
-  * forks and downloads are disabled 
+# 🚧 Beta software and hardward setup🚧
+   * damage to your equipment may occur
 
 # Landroid_Mower_Upgrade
 Taking my old landroid mower, and make it SMART.
