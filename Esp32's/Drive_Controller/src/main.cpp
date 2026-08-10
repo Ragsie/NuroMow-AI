@@ -19,6 +19,32 @@ rclc_support_t support;
 rcl_allocator_t allocator;
 rcl_node_t node;
 
+// --- PHYSICAL DIMENSIONS (in meters) ---
+const float WHEEL_RADIUS = 0.112; 
+const float WHEEL_BASE = 0.403;
+
+// --- KINEMATICS: ROS 2 to RPM ---
+void calculate_motor_rpm(float v, float omega, float &rpm_right, float &rpm_left) {
+  // 1. Calculate the speed of each wheel in m/s
+  float v_r = v + (omega * WHEEL_BASE / 2.0);
+  float v_l = v - (omega * WHEEL_BASE / 2.0);
+
+  // 2. Convert m/s to revolutions per minute (RPM)
+  rpm_right = (v_r * 60.0) / (2.0 * PI * WHEEL_RADIUS);
+  rpm_left  = (v_l * 60.0) / (2.0 * PI * WHEEL_RADIUS);
+}
+
+// --- ODOMETRY: RPM back to ROS 2 ---
+void calculate_robot_velocity(float rpm_right, float rpm_left, float &v, float &omega) {
+  // 1. Convert RPM back to m/s for each wheel
+  float v_r = (rpm_right * 2.0 * PI * WHEEL_RADIUS) / 60.0;
+  float v_l = (rpm_left * 2.0 * PI * WHEEL_RADIUS) / 60.0;
+
+  // 2. Calculate the robot's true forward speed (v) and turning speed (omega)
+  v = (v_r + v_l) / 2.0;
+  omega = (v_r - v_l) / WHEEL_BASE;
+}
+
 // --- SAFETY FLAGS ---
 // 'volatile' tells the compiler that this variable can change unexpectedly (via interrupt)
 volatile bool e_stop_active = false; 
@@ -28,6 +54,36 @@ volatile bool e_stop_active = false;
 void IRAM_ATTR shieldHitISR() {
   e_stop_active = true;
   // TODO: Send 0 RPM directly to the VESC via CAN (TWAI) here for an immediate emergency stop!
+}
+
+// --- VESC CAN-BUS CONSTANTS ---
+const uint8_t VESC_ID_RIGHT = 1; // Change if your right motor has a different CAN ID in VESC Tool
+const uint8_t VESC_ID_LEFT = 2;  // Change if your left motor has a different CAN ID in VESC Tool
+const uint32_t VESC_CAN_PACKET_SET_RPM = 3; // VESC command ID for setting RPM
+
+// --- HELPER FUNCTION: Send RPM to VESC ---
+void send_vesc_rpm(uint8_t controller_id, float target_rpm) {
+  twai_message_t message;
+  
+  // VESC uses 29-bit Extended CAN IDs. The format is: (Command ID << 8) | Controller ID
+  message.identifier = (VESC_CAN_PACKET_SET_RPM << 8) | controller_id;
+  message.extd = 1; // 1 = Extended ID (29-bit)
+  message.rtr = 0;  // 0 = Standard data frame
+  message.data_length_code = 4; // We are sending a 32-bit integer (4 bytes)
+  
+  // Convert float RPM to 32-bit integer. 
+  // NOTE: VESC actually expects ERPM (Electrical RPM). 
+  // ERPM = RPM * Motor_Pole_Pairs. We might need to multiply this later!
+  int32_t erpm = (int32_t)target_rpm;
+  
+  // VESC expects data in Big Endian format (highest byte first)
+  message.data[0] = (erpm >> 24) & 0xFF;
+  message.data[1] = (erpm >> 16) & 0xFF;
+  message.data[2] = (erpm >> 8) & 0xFF;
+  message.data[3] = erpm & 0xFF;
+  
+  // Send the message on the CAN bus (Wait max 1 tick if bus is busy)
+  twai_transmit(&message, pdMS_TO_TICKS(1));
 }
 
 // --- ROS 2 CALLBACK (Triggered when Nav2 sends movement commands) ---
@@ -43,8 +99,14 @@ void cmd_vel_callback(const void * msgin) {
   float linear_x = twist_msg->linear.x;
   float angular_z = twist_msg->angular.z;
 
-  // TODO: Add kinematic math to convert linear_x and angular_z into right and left wheel RPM
-  // TODO: Pack the RPM values into a CAN (TWAI) message and send to the Autoro Dual ESC
+  // 1. Add kinematic math to convert linear_x and angular_z into right and left wheel RPM
+  float rpm_right = 0.0;
+  float rpm_left = 0.0;
+  calculate_motor_rpm(linear_x, angular_z, rpm_right, rpm_left);
+
+  // 2. Pack the RPM values into a CAN (TWAI) message and send to the Autoro Dual ESC
+  send_vesc_rpm(VESC_ID_RIGHT, rpm_right);
+  send_vesc_rpm(VESC_ID_LEFT, rpm_left);
 }
 
 void setup() {
