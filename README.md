@@ -60,6 +60,7 @@ For now to keep things manageable, I have divided the build into logical phases:
 - [ ] Map out the original wiring (motors, Hall sensors).
 - [ ] Install the 6S BMS and route power safely through fuses.
 - [ ] Install Mini560 Pro buck converters for clean 5V to the Pi and GPS.
+- [ ] look at motors to verify hall sensors
 
 ### Phase 2: RTK-GPS Base Station
 - [ ] Configure Quectel LC29H as Base (Survey-in/Fixed mode) via PC.
