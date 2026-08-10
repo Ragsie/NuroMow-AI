@@ -55,7 +55,7 @@ void setup() {
   }
 
   // Setup Micro-ROS over Serial transport
-  set_microros_serial_transports(Serial);
+  set_microros_transports();
   delay(2000); // Give the connection time to stabilize
   
   allocator = rcl_get_default_allocator();
