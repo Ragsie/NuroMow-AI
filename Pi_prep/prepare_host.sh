@@ -51,4 +51,5 @@ sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin 
 sudo usermod -aG docker $USER
 
 echo "✅ Host provisioning complete! The system is fully ready for docker-compose."
-echo "⚠️  Please REBOOT your machine now by typing: sudo reboot"
+echo "⚠️  system will reboot in 5 seconds to apply changes. Please log back in after the reboot."
+sudo reboot
