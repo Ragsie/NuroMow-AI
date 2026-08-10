@@ -67,8 +67,17 @@ For now to keep things manageable, I have divided the build into logical phases:
 - [ ] Test the physical collision detection (floating shield vs. objects).
 - [ ] Fine-tune the 90-degree corner navigation.
 
-### Extras that did not fit phase 1-5
+### Phase 6: Advanced Vision & AI (Stop & Think)
+*Instead of running resource-heavy live video AI, I am prioritizing safety through a "Stop and Think" architecture. The Pi 4B is perfectly capable of running AI models on its CPU if it is allowed to take its time.*
 
+- [ ] Create a custom ROS 2 node that listens to the VL53L5X ToF sensors.
+- [ ] Implement "Pause Routing": When ToF detects an anomaly, halt the mower completely to prevent accidents.
+- [ ] Trigger the IMX219 camera to snap a single, clear still image while stationary.
+- [ ] Run lightweight object detection (e.g., YOLOv8-Nano) directly on the Pi 4B CPU.
+- [ ] Dynamic logic: If the AI confirms a hazard (toy/animal), route around it. If it's a false alarm (tall dandelion), resume straight path.
+
+
+### Extras that did not fit phase 1-6
 
 
 # 📐 Diagrams
