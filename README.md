@@ -12,7 +12,7 @@ I'll document the whole journey here. If you have a mower tearing up your lawn t
 
 Here is the complete overview of all components, controllers, and wiring used for the mower and the RTK base station.
 
-(PARTS LIST IS NOT final!)
+(PARTS LIST IS NOT FINAL!)
 
 | Category | Component / Model | Qty | Purpose in Project | Link |
 | :--- | :--- | :---: | :---: | :--- |
