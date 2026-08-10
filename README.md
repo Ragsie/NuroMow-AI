@@ -8,6 +8,18 @@ This project started out of frustration: my current Worx M600 Plus has a bad hab
 I'll document the whole journey here. If you have a mower tearing up your lawn too, I hope this can serve as some inspiration for your own build.
 
 
+# 🤖 Worx ROS 2 Autonomous Mower
+
+An advanced, fully autonomous lawn mower built on a Worx Landroid chassis. This project upgrades the original hardware with a modern ROS 2 (Humble/Jazzy) stack, VESC motor controllers, I2C Time-of-Flight (ToF) sensors, and real-time AI vision using YOLO26 for ultimate safety.
+
+## 🌟 Features
+* **ROS 2 Nav2:** Dynamic path planning and obstacle avoidance.
+* **YOLO26 AI Vision:** Real-time object detection (detects humans, pets, and custom trained objects like toys and animal waste) to trigger immediate emergency stops.
+* **VESC Motor Control:** Smooth and powerful control of the drive wheels via CAN-bus.
+* **Micro-ROS:** Seamless communication between the main computer and the ESP32 drive controllers.
+* **100% Dockerized:** The entire brain (ROS 2, AI, Sensor nodes) runs in isolated Docker containers for extreme reliability and instant booting.
+
+
 ## 🛠️ Hardware & Components (Bill of Materials)
 
 Here is the complete overview of all components, controllers, and wiring used for the mower and the RTK base station.
@@ -55,31 +67,123 @@ For now to keep things manageable, I have divided the build into logical phases:
 - [ ] Direct hardware wiring: Base GPS (TX) -> Base LoRa (RX). No microcontroller needed.
 
 ### Phase 3: Rover Low-Level (ESP32)
-- [ ] Code PlatformIO on ESP32 to communicate with VESC controllers.
+- [x] Code PlatformIO on ESP32 to communicate with VESC controllers.
 - [ ] Wire the Worx floating shield's Hall sensors directly to the ESP32 for hardware E-stop.
 - [ ] Direct hardware wiring: Rover LoRa (TX) -> Rover GPS UART2 (RX).
 
 ### Phase 4: Rover High-Level (ROS 2 & Pi 4)
+- [x] code and make docker for pi
 - [ ] Install ROS 2 and configure Nav2 on the Raspberry Pi.
 - [ ] Feed RTK-fixed NMEA data from the Quectel GPS to ROS via USB.
-- [ ] Implement Smac Planner to allow for reversing (Y-turns in sharp corners).
+- [ x Implement Smac Planner to allow for reversing (Y-turns in sharp corners).
 
 ### Phase 5: Field Testing & Tuning
 - [ ] Record the first geofence polygon using a controller.
-- [ ] Test the physical collision detection (floating shield vs. objects).
+- [x] Test the physical collision detection (floating shield vs. objects).
 - [ ] Fine-tune the 90-degree corner navigation.
-
+- [ ] Reverse or try from another way (to prevent dig in addon to step above)
 ### Phase 6: Advanced Vision & AI (Stop & Think)
 *Instead of running resource-heavy live video AI, I am prioritizing safety through a "Stop and Think" architecture. The Pi 4B is perfectly capable of running AI models on its CPU if it is allowed to take its time.*
 
-- [ ] Create a custom ROS 2 node that listens to the VL53L5X ToF sensors.
-- [ ] Implement "Pause Routing": When ToF detects an anomaly, halt the mower completely to prevent accidents.
-- [ ] Trigger the IMX219 camera to snap a single, clear still image while stationary.
-- [ ] Run lightweight object detection (e.g., YOLOv8-Nano) directly on the Pi 4B CPU.
-- [ ] Dynamic logic: If the AI confirms a hazard (toy/animal), route around it. If it's a false alarm (tall dandelion), resume straight path.
-
+- [x] Create a custom ROS 2 node that listens to the VL53L5X ToF sensors.
+- [x] Implement "Pause Routing": When ToF and video detects an anomaly if it takes too long processing, halts the mower completely to prevent accidents.
+- [x] continuos 1-2fps camera to stream.
+- [x] Run lightweight object detection (e.g., YOLOv8-Nano) directly on the Pi 4B CPU.
+- [x] Dynamic logic: If the AI confirms a hazard (toy/animal), route around it. If it's a false alarm (tall dandelion), resume straight path.
+- [ ] Train YOLO26 on dog toys and poo to enhance voidance 
 
 ### Extras that did not fit phase 1-6
+
+
+## 🚀 Installation Guide
+
+### Phase 1: Host Preparation (Main Brain)
+Before running the Docker containers, the host machine (Raspberry Pi or Mini PC) needs to be debloated and configured to allow hardware passthrough for I2C and USB devices.
+
+1. Install Ubuntu Server 24.04 LTS on your device.
+2. Connect via SSH and download the provisioning script:
+   ```
+   wget [https://raw.githubusercontent.com/Ragsie/worx-ros2-mower/main/scripts/prepare_host.sh]    (https://raw.githubusercontent.com/Ragsie/worx-ros2-mower/main/scripts/prepare_host.sh)
+   ```
+
+1.  Make the script executable and run it:
+    ```
+    chmod +x prepare_host.sh
+    ./prepare_host.sh
+    ```
+
+2. The system will automatically reboot when finished.
+
+### Phase 2: Deploying the Docker Stack
+Once the host is prepared and rebooted, you can deploy the entire ROS 2 and AI stack with a single command.
+
+1. Clone this repository to your host machine:
+   ```
+   git clone [https://github.com/Ragsie/worx-ros2-mower.git](https://github.com/Ragsie/worx-ros2-mower.git)
+   cd worx-ros2-mower
+   ```
+
+2. Build and start the containers in the background:
+   ```
+   docker compose up -d --build
+   ```
+Note: The first build will take several minutes as it downloads ROS 2, PyTorch, and YOLO dependencies. Subsequent startups will take just a few seconds.
+
+### Phase 3: Flashing the ESP32 Drive Controller
+The ESP32 translates ROS 2 /cmd_vel topics into CAN-bus RPM commands for the VESCs, and handles the physical bumper interrupts.
+
+1. Open Visual Studio Code on your PC.
+
+2. Install the PlatformIO extension.
+
+3. Open the esp32_drive_controller folder from this repository in VS Code.
+
+4. Connect your ESP32 via USB.
+
+5. Click the Build (✓) button in the bottom PlatformIO toolbar.
+
+6. Once compiled successfully, click the Upload (→) button to flash the firmware.
+
+
+###🔌 Wiring Reference
+ESP32 to VESC (CAN-bus via SN65HVD230):
+
+  * ESP32 3.3V ➔ Transceiver VCC
+
+  * ESP32 GND ➔ Transceiver GND
+
+  * ESP32 GPIO 5 ➔ Transceiver TX
+
+  * ESP32 GPIO 4 ➔ Transceiver RX
+
+Transceiver CAN H & CAN L ➔ VESC 1 ➔ VESC 2
+
+  * ESP32 to Bumper (E-Stop):
+
+  * Bumper Switch Pin 1 ➔ ESP32 GPIO 15
+ 
+  * Bumper Switch Pin 2 ➔ ESP32 GND
+
+Raspberry Pi to ToF Multiplexer (TCA9548A):
+
+  * Pi Pin 1 (3.3V) ➔ MUX VIN
+
+  * Pi Pin 6 (GND) ➔ MUX GND
+
+  * Pi Pin 3 (SDA) ➔ MUX SDA
+
+  * Pi Pin 5 (SCL) ➔ MUX SCL
+
+### 🧠 AI Fine-Tuning (Optional)
+The default yolo26n.pt model detects standard COCO classes (persons, dogs, cats). If you wish to detect custom hazards like garden toys or animal waste:
+
+1. Gather a dataset of your obstacles from the mower's perspective.
+
+2. Label them using tools like Label Studio.
+
+3. Train a custom YOLO26 nano model.
+
+4. Replace yolo26n.pt in the yolo_safety_node folder with your new best.pt weights and update the classes in yolo_node.py.
 
 
 # 📐 Diagrams
@@ -151,3 +255,13 @@ Here is a diagram of how the logic is gonna be connected. (changes may occur)
                        (Wheels L+R Encoder)       (Mower Telemetry)
 
  ```
+
+
+### buy me a cup of coffie
+I have used alot of time on this project.
+
+bitcoincash
+
+<img width="237" height="205" alt="image" src="https://github.com/user-attachments/assets/c13ef40b-aca1-45da-8473-332744b63b28" />
+
+bitcoincash:qzp4c7klef8q6gxycvc84dx0fnhnfxkkpy6xda56h3
