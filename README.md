@@ -20,8 +20,8 @@ Here is the complete overview of all components, controllers, and wiring used fo
 | **GNSS / RTK** | Quectel LC29H(DA) | 1 | Mounted in the rover for cm-precise positioning. | [Link]() |
 | **GNSS / RTK** | Harxon Helix HX-103B | 2 | L1/L5 Dual-Band antennas (1x Base, 1x Rover). | [Link]() |
 | **Communication** | EBYTE E32-900T20D-V8 | 2 | LoRa Transceiver (868/915 MHz transparent UART link). | [Link]() |
-| **Motor Control** | Autoro Single ESC V6.7 BLDC FOC | 1 | Controls the mower motors.* | [Link]() |
-| **Motor Control** | Autoro Dual ESC V6.7 BLDC FOC | 1 | Controls the wheels motor.* | [Link]() |
+| **Motor Control** | Autoro Single ESC V6.7 BLDC FOC | 1 | Controls the mower motor.* | [Link]() |
+| **Motor Control** | Autoro Dual ESC V6.7 BLDC FOC | 1 | Controls the wheels motors.* | [Link]() |
 | **Power & Logic** | PLR Mini560 / Pro | 2 | Steps down battery voltage (18-28V) to clean 5V/3.3V. | [Link]() |
 | **Power & Logic** | 230V to 5V USB Power Supply | 1 | Permanent power supply for the indoor base station. | [Link]() |
 | **Power** | YOUME 5200mAh LiPo 6S 22.2V XT60 | 1 | Main battery power for the robot. | [Link]() |
