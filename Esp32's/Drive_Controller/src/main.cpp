@@ -66,7 +66,7 @@ void setup() {
   }
 
   // 4. Setup Micro-ROS using the pre-compiled Arduino transport
-  set_microros_serial_transports(Serial);
+  set_microros_transports();
   delay(2000); // Give the connection time to stabilize
   
   allocator = rcl_get_default_allocator();
