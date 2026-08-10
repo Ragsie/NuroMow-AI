@@ -30,7 +30,7 @@ Here is the complete overview of all components, controllers, and wiring used fo
 | **Cables & Plugs** | XT60 + 12-14 AWG Silicone Wire | 1 | High-current power distribution from battery to motors. | [Link]() |
 | **Cables & Plugs** | Dupont / JST Wires (24-26 AWG) | 1 | Signal lines and data connections (UART, TX/RX, I2C). | [Link]() |
 | **Enclosure** | IP65/IP67 Plastic Junction Box | 1 | Waterproof housing for the outdoor base station electronics. | [Link]() |
-| **Navigation** | Raspberry Pi 5 8MP IMX219 (77°) | 1 | Camera module used for visual navigation/obstacle detection. | [Link]() |
+| **Navigation** | Raspberry Pi Camera Module 3 12 MP IMX708 | 1 | Camera module used for visual navigation/obstacle detection. | [Link]() |
 | **Navigation** | VL53L5X V2 ToF Laser (8x8) | 2 | Time-of-Flight sensors for short-range obstacle avoidance. | [Link]() |
 | **Navigation** | BNO085 IMU | 1 | 9-axis motion sensor for accurate heading and odometry. | [Link]() |
 | **Logic** | ESP32 Microcontroller | 2 | Low-level hardware controller (VESC communication & sensors). | [Link]() |
