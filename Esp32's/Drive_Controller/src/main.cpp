@@ -60,6 +60,7 @@ void IRAM_ATTR shieldHitISR() {
 const uint8_t VESC_ID_RIGHT = 1; // Change if your right motor has a different CAN ID in VESC Tool
 const uint8_t VESC_ID_LEFT = 2;  // Change if your left motor has a different CAN ID in VESC Tool
 const uint32_t VESC_CAN_PACKET_SET_RPM = 3; // VESC command ID for setting RPM
+const int POLE_PAIRS = 15; // TODO: Opdater dette tal, når du har fundet det i VESC Tool!
 
 // --- HELPER FUNCTION: Send RPM to VESC ---
 void send_vesc_rpm(uint8_t controller_id, float target_rpm) {
@@ -71,10 +72,8 @@ void send_vesc_rpm(uint8_t controller_id, float target_rpm) {
   message.rtr = 0;  // 0 = Standard data frame
   message.data_length_code = 4; // We are sending a 32-bit integer (4 bytes)
   
-  // Convert float RPM to 32-bit integer. 
-  // NOTE: VESC actually expects ERPM (Electrical RPM). 
-  // ERPM = RPM * Motor_Pole_Pairs. We might need to multiply this later!
-  int32_t erpm = (int32_t)target_rpm;
+  // Calculate ERPM (Electrical RPM) by multiplying physical RPM with Pole Pairs
+  int32_t erpm = (int32_t)(target_rpm * POLE_PAIRS);
   
   // VESC expects data in Big Endian format (highest byte first)
   message.data[0] = (erpm >> 24) & 0xFF;
