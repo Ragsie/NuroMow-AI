@@ -1,0 +1,53 @@
+version: '3.8'
+
+services:
+  # 1. MICRO-ROS AGENT
+  # Acts as the bridge between the Raspberry Pi/Mini PC and the ESP32 controllers.
+  microros_agent:
+    image: microros/micro-ros-agent:humble
+    container_name: microros_agent
+    # 'host' network is CRITICAL for ROS 2 so containers can seamlessly share topics
+    network_mode: "host" 
+    privileged: true 
+    volumes:
+      - /dev:/dev
+    # Assuming the ESP32 is connected via USB (ttyUSB0). Change if using Wi-Fi (UDP).
+    command: serial --dev /dev/ttyUSB0 -v6
+    restart: unless-stopped
+
+  # 2. YOLO AI SAFETY NODE
+  # Runs the Python script we wrote to detect toys, pets, and humans.
+  yolo_safety:
+    build: ./yolo_safety_node
+    container_name: yolo_safety
+    network_mode: "host"
+    devices:
+      # Passthrough the physical webcam hardware to the container
+      - "/dev/video0:/dev/video0" 
+    volumes:
+      # Maps your local folder into the container so you can edit Python files live
+      - ./yolo_safety_node:/app 
+    restart: unless-stopped
+
+  # 3. TOF SENSOR NODE
+  # Runs the Python script to read the I2C Multiplexer and VL53L5X sensors.
+  tof_sensors:
+    build: ./tof_sensor_node
+    container_name: tof_sensors
+    network_mode: "host"
+    devices:
+      # Passthrough the I2C bus hardware to the container
+      - "/dev/i2c-1:/dev/i2c-1" 
+    volumes:
+      - ./tof_sensor_node:/app
+    restart: unless-stopped
+
+  # 4. ROS 2 NAV2 CORE (Placeholder)
+  # This will eventually run the path planning, mapping, and driving logic.
+  ros2_nav:
+    image: ros:humble-ros-base
+    container_name: ros2_nav
+    network_mode: "host"
+    # Temporary placeholder command to keep the container alive
+    command: tail -f /dev/null 
+    restart: unless-stopped
