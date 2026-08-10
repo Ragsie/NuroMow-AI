@@ -72,23 +72,24 @@ For now to keep things manageable, I have divided the build into logical phases:
 - [ ] Direct hardware wiring: Rover LoRa (TX) -> Rover GPS UART2 (RX).
 
 ### Phase 4: Rover High-Level (ROS 2 & Pi 4)
+- [x] code and make docker for pi
 - [ ] Install ROS 2 and configure Nav2 on the Raspberry Pi.
 - [ ] Feed RTK-fixed NMEA data from the Quectel GPS to ROS via USB.
-- [ ] Implement Smac Planner to allow for reversing (Y-turns in sharp corners).
+- [ x Implement Smac Planner to allow for reversing (Y-turns in sharp corners).
 
 ### Phase 5: Field Testing & Tuning
 - [ ] Record the first geofence polygon using a controller.
-- [ ] Test the physical collision detection (floating shield vs. objects).
+- [x] Test the physical collision detection (floating shield vs. objects).
 - [ ] Fine-tune the 90-degree corner navigation.
-
+- [ ] Reverse or try from another way (to prevent dig in addon to step above)
 ### Phase 6: Advanced Vision & AI (Stop & Think)
 *Instead of running resource-heavy live video AI, I am prioritizing safety through a "Stop and Think" architecture. The Pi 4B is perfectly capable of running AI models on its CPU if it is allowed to take its time.*
 
-- [ ] Create a custom ROS 2 node that listens to the VL53L5X ToF sensors.
-- [ ] Implement "Pause Routing": When ToF detects an anomaly, halt the mower completely to prevent accidents.
-- [ ] Trigger the IMX219 camera to snap a single, clear still image while stationary.
-- [ ] Run lightweight object detection (e.g., YOLOv8-Nano) directly on the Pi 4B CPU.
-- [ ] Dynamic logic: If the AI confirms a hazard (toy/animal), route around it. If it's a false alarm (tall dandelion), resume straight path.
+- [x] Create a custom ROS 2 node that listens to the VL53L5X ToF sensors.
+- [x] Implement "Pause Routing": When ToF and video detects an anomaly if it takes too long processing, halts the mower completely to prevent accidents.
+- [x] continuos 1-2fps camera to stream.
+- [x] Run lightweight object detection (e.g., YOLOv8-Nano) directly on the Pi 4B CPU.
+- [x] Dynamic logic: If the AI confirms a hazard (toy/animal), route around it. If it's a false alarm (tall dandelion), resume straight path.
 - [ ] Train YOLO26 on dog toys and poo to enhance voidance 
 
 ### Extras that did not fit phase 1-6
