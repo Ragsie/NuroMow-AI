@@ -2,9 +2,8 @@ name: Build Worx Mower Containers
 
 on:
   push:
-    branches: [ "main" ]
-    branches-ignore:
-      - 'dev'
+    branches: 
+      - 'main'
 
 jobs:
   build:
