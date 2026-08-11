@@ -23,9 +23,9 @@ sudo raspi-config nonint do_spi 0
 
 # 4. Grant hardware permissions to the current user (and Docker daemon)
 echo "🔑 Granting user permissions for I2C, Serial (USB), and Video (Camera)..."
-sudo usermod -aG i2c $USER 
-sudo usermod -aG dialout $USER
-sudo usermod -aG video $USER
+sudo usermod -aG i2c "$USER" 
+sudo usermod -aG dialout "$USER"
+sudo usermod -aG video "$USER"
 
 # 5. Install Docker and Docker Compose
 echo "🐳 Installing Docker Engine and Docker Compose..."
@@ -41,7 +41,7 @@ echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.
 
 sudo apt-get update
 sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin -y
-sudo usermod -aG docker $USER
+sudo usermod -aG docker "$USER"
 
 echo "📥 Pulling latest Docker containers from Docker Hub..."
 # Sørg for at stå i den mappe hvor din docker-compose.yml ligger, før du kører scriptet,
