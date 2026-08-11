@@ -25,9 +25,9 @@ sudo raspi-config nonint do_spi 0
 
 # 4. Grant hardware permissions to the current user (and Docker daemon)
 echo "🔑 Granting user permissions for I2C, Serial (USB), and Video (Camera)..."
-sudo usermod -aG i2c $USER 
-sudo usermod -aG dialout $USER
-sudo usermod -aG video $USER
+sudo usermod -aG i2c "$USER" 
+sudo usermod -aG dialout "$USER"
+sudo usermod -aG video "$USER"
 
 # 5. Install Docker and Docker Compose
 echo "🐳 Installing Docker Engine and Docker Compose..."
@@ -48,7 +48,7 @@ sudo apt-get update
 sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin -y
 
 # Add current user to the Docker group so you can run containers without 'sudo'
-sudo usermod -aG docker $USER
+sudo usermod -aG docker "$USER"
 
 echo "✅ Host provisioning complete! The system is fully ready for docker-compose."
 echo "⚠️  system will reboot in 5 seconds to apply changes. Please log back in after the reboot."
