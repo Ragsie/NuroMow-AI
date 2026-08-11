@@ -1,4 +1,4 @@
-name: Build Pi Docker Image
+name: Build Worx Mower Containers
 
 on:
   push:
@@ -13,7 +13,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # QEMU er stadig nødvendig for at bygge ARM på GitHubs x86-servere
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
 
@@ -26,11 +25,26 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Build and push
+      - name: Build YOLO Safety
         uses: docker/build-push-action@v6
         with:
-          context: .
+          context: ./yolo_safety_node
           push: true
-          # Bygger KUN til 64-bit Raspberry Pi
           platforms: linux/arm64
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/my-app:latest
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/worx-yolo-safety:latest
+
+      - name: Build TOF Sensors
+        uses: docker/build-push-action@v6
+        with:
+          context: ./tof_sensor_node
+          push: true
+          platforms: linux/arm64
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/worx-tof-sensors:latest
+
+      - name: Build Rosbridge
+        uses: docker/build-push-action@v6
+        with:
+          context: ./rosbridge_node
+          push: true
+          platforms: linux/arm64
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/worx-rosbridge:latest

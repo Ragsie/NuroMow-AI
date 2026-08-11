@@ -18,7 +18,7 @@ services:
   # 2. YOLO AI SAFETY NODE
   # Runs the Python script we wrote to detect toys, pets, and humans.
   yolo_safety:
-    build: ./yolo_safety_node
+    image: dit-brugernavn/worx-yolo-safety:latest
     container_name: yolo_safety
     network_mode: "host"
     devices:
@@ -32,7 +32,7 @@ services:
   # 3. TOF SENSOR NODE
   # Runs the Python script to read the I2C Multiplexer and VL53L5X sensors.
   tof_sensors:
-    build: ./tof_sensor_node
+    image: dit-brugernavn/worx-tof-sensors:latest
     container_name: tof_sensors
     network_mode: "host"
     devices:
@@ -54,7 +54,7 @@ services:
 
   # 5. ROSBRIDGE WEB SOCKET (Til Web UI/Foxglove)
   rosbridge:
-    build: ./rosbridge_node
+    image: dit-brugernavn/worx-rosbridge:latest
     container_name: rosbridge
     network_mode: "host"
     restart: unless-stopped
