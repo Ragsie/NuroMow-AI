@@ -30,22 +30,28 @@ jobs:
         with:
           context: ./yolo_safety_node
           push: true
-          platforms: linux/arm64
+          platforms: linux/arm64,linux/amd64
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/worx-yolo-safety:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
       - name: Build TOF Sensors
         uses: docker/build-push-action@v6
         with:
           context: ./tof_sensor_node
           push: true
-          platforms: linux/arm64
+          platforms: linux/arm64,linux/amd64
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/worx-tof-sensors:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
       - name: Build Rosbridge WebSocket
         uses: docker/build-push-action@v6
         with:
           context: ./rosbridge_websocket
           push: true
-          platforms: linux/arm64
+          platforms: linux/arm64,linux/amd64
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/worx-rosbridge:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
