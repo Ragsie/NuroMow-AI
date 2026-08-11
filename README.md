@@ -106,17 +106,18 @@ Before running the Docker containers, the host machine (Raspberry Pi or Mini PC)
 
 1. Install Ubuntu Server 24.04 LTS on your device.
 2. Connect via SSH and download the provisioning script:
+   
    ```
-   wget [https://raw.githubusercontent.com/Ragsie/worx-ros2-mower/main/scripts/prepare_host.sh]    (https://raw.githubusercontent.com/Ragsie/worx-ros2-mower/main/scripts/prepare_host.sh)
+   # 1. Clone the repository as a shallow copy (lightweight)
+   git clone --depth 1 https://github.com/Ragsie/worx-ros2-mower.git
+   cd worx-ros2-mower/system_setup
+
+   # 2. Run the script
+   chmod +x prepare_host.sh
+   ./prepare_host.sh
    ```
 
-1.  Make the script executable and run it:
-    ```
-    chmod +x prepare_host.sh
-    ./prepare_host.sh
-    ```
-
-2. The system will automatically reboot when finished.
+3. The system will automatically reboot when finished.
 
 ### Phase 2: Deploying the Docker Stack
 Once the host is prepared and rebooted, you can deploy the entire ROS 2 and AI stack with a single command.
