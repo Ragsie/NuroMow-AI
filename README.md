@@ -1,5 +1,5 @@
 # 🚧 ALPHA software and hardward setup🚧
-   * damage to your equipment may occur 
+   * damage to your equipment may occur.
 
 # Landroid_Mower_Upgrade
 Taking my old landroid mower, and make it SMART.
