@@ -165,16 +165,7 @@ Raspberry Pi to ToF Multiplexer (TCA9548A):
 
   * Pi Pin 5 (SCL) ➔ MUX SCL
 
-### 🧠 AI Fine-Tuning (Optional)
-The default yolo26n.pt model detects standard COCO classes (persons, dogs, cats). If you wish to detect custom hazards like garden toys or animal waste:
 
-1. Gather a dataset of your obstacles from the mower's perspective.
-
-2. Label them using tools like Label Studio.
-
-3. Train a custom YOLO26 nano model.
-
-4. Replace yolo26n.pt in the yolo_safety_node folder with your new best.pt weights and update the classes in yolo_node.py.
 
 
 # 📐 Diagrams
