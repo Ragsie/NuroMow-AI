@@ -32,10 +32,10 @@ To keep this repository clean and easy to navigate, all detailed documentation, 
 **👉 [Click here to read the full Wiki Docs](https://github.com/Ragsie/worx-ros2-mower/wiki)**
 
 In the Wiki you will find:
-* **[Bill of Materials (Hardware & Components)]https://github.com/Ragsie/worx-ros2-mower/wiki/2-%F0%9F%9B%A0%EF%B8%8F-Hardware-&-Setup**
-* **[Project Roadmap & Phases]https://github.com/Ragsie/worx-ros2-mower/wiki/1-%F0%9F%9A%9C-Worx-ROS-2-Autonomous-Mower#3-pending-tasks-to-do**
-* **[Full Installation Guide (Host & ESP32)]https://github.com/Ragsie/worx-ros2-mower/wiki/4-%F0%9F%93%81-Codebase-Reference**
-* **[System Diagrams (Power & Data Flow)]https://github.com/Ragsie/worx-ros2-mower/wiki/2-%F0%9F%9B%A0%EF%B8%8F-Hardware-&-Setup#-power-distribution-power-bus**
+* **[Bill of Materials (Hardware & Components)](https://github.com/Ragsie/worx-ros2-mower/wiki/2-%F0%9F%9B%A0%EF%B8%8F-Hardware-&-Setup)**
+* **[Project Roadmap & Phases](https://github.com/Ragsie/worx-ros2-mower/wiki/1-%F0%9F%9A%9C-Worx-ROS-2-Autonomous-Mower#3-pending-tasks-to-do)**
+* **[Full Installation Guide (Host & ESP32)](https://github.com/Ragsie/worx-ros2-mower/wiki/4-%F0%9F%93%81-Codebase-Reference)**
+* **[System Diagrams (Power & Data Flow)](https://github.com/Ragsie/worx-ros2-mower/wiki/2-%F0%9F%9B%A0%EF%B8%8F-Hardware-&-Setup#-power-distribution-power-bus)**
 
 ---
 
