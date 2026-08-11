@@ -69,14 +69,11 @@ jobs:
 
       - name: Build ESP32 kode (Mappe 1)
         run: |
-          # Flaget '-d' fortæller PlatformIO, hvilken mappe den skal bygge.
-          # UDSKIFT 'sti/til/mappe_1' med navnet på din første mappe
-          pio run -d Esp32's/Cutter_Contoller/
+          pio run -d "Esp32's/Cutter_Contoller"
 
       - name: Build ESP32 kode (Mappe 2)
         run: |
-          # UDSKIFT 'sti/til/mappe_2' med navnet på din anden mappe
-          pio run -d Esp32's/Drive_Contoller/
+          pio run -d "Esp32's/Drive_Contoller"
 
       - name: Run C++ tests
         run: |
