@@ -51,3 +51,10 @@ services:
     # Temporary placeholder command to keep the container alive
     command: tail -f /dev/null 
     restart: unless-stopped
+
+  # 5. ROSBRIDGE WEB SOCKET (Til Web UI/Foxglove)
+  rosbridge:
+    build: ./rosbridge_node
+    container_name: rosbridge
+    network_mode: "host"
+    restart: unless-stopped

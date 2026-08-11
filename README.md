@@ -97,7 +97,7 @@ For now to keep things manageable, I have divided the build into logical phases:
 - [ ] Train YOLO26 on dog toys, poo, humans, cats, lawn edge to enhance voidance 
 
 ### Extras that did not fit phase 1-6
-
+- [ ] Implement Web view /app view (if possible)
 
 ## 🚀 Installation Guide
 
