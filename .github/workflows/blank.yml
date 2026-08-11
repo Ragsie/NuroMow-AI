@@ -1,0 +1,91 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  python-test:
+    name: Python Lint & Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies (flake8 and pytest)
+        run: |
+          python -m pip install --upgrade pip
+          pip install flake8 pytest
+          # Uncomment the line below if you have a requirements.txt file:
+          # pip install -r requirements.txt
+
+      - name: Lint with flake8
+        run: |
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+
+      - name: Run Python tests with pytest
+        run: |
+          # This will automatically find and run all tests in your Python files
+          pytest
+
+  shell-check:
+    name: Shell Script Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install ShellCheck
+        run: sudo apt-get install -y shellcheck
+
+      - name: Run ShellCheck on all .sh files
+        run: |
+          # Finds all .sh files in the repo and checks them for errors
+          find . -type f -name "*.sh" -exec shellcheck {} +
+
+  cpp-test:
+    name: C++ Build & Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install C++ dependencies (CMake and GCC)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake
+
+      - name: Build C++ code
+        run: |
+          mkdir build
+          cd build
+          cmake ..
+          make
+
+      - name: Run C++ tests
+        run: |
+          cd build
+          # Option A: If you use CTest (standard with CMake)
+          ctest --output-on-failure
+          
+          # Option B: If you compile a specific test executable, run it directly
+          # ./my_test_executable
+
+  docker-check:
+    name: Dockerfile Build Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Test Docker build
+        run: |
+          # Builds the Dockerfile to ensure there are no syntax errors
+          docker build -t test-image .
