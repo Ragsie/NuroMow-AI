@@ -63,6 +63,29 @@ fi
 
 # Check if containers are actually running before cleaning up
 if docker compose ps | grep -q "Up"; then
+# ... (your existing script that sets up the system) ...
+
+echo "starting Worx Landroid containers..."
+
+# ==========================================
+# INSTALL PORTAINER
+# ==========================================
+
+echo "Installing Portainer Web UI..."
+
+# 1. Create a virtual hard drive for Portainer's settings (ignore error if it exists)
+sudo docker volume create portainer_data || true
+
+# 2. Download and start Portainer
+sudo docker run -d -p 8000:8000 -p 9443:9443 --name portainer \
+    --restart=always \
+    -v /var/run/docker.sock:/var/run/docker.sock \
+    -v portainer_data:/data \
+    portainer/portainer-ce:latest
+
+echo "Setup complete! You can access Portainer at: https://<RASPBERRY_PI_IP>:9443"
+echo "cleaning up temporary repository files..."
+wait 5
     echo "🧹 Cleaning up temporary repository files..."
      Find the path where the script is running from, and go up one level
      CURRENT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -79,6 +102,6 @@ fi
 
 echo "✅ Host provisioning & deployment complete!"
 echo "⚠️ Please note: Group permissions (docker, i2c, dialout, video) require a re-login or reboot to take effect."
-echo "🔄 Rebooting the system to apply changes..."
+echo "🔄 Rebooting the system in 5 seconds to apply changes..."
 wait 5
 sudo reboot

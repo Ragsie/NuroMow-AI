@@ -5,7 +5,12 @@ on:
     branches: 
       - 'main'
     tags:
-      - 'v*.*.*'  # Triggers the build when you push a tag like v1.0.0
+      - 'v*.*.*'
+    paths:
+      - 'yolo_safety_node/**'
+      - 'tof_sensor_node/**'
+      - 'rosbridge_websocket/**'
+      - '.github/workflows/**' 
 
 jobs:
   build:
