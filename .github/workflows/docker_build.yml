@@ -4,6 +4,8 @@ on:
   push:
     branches: 
       - 'main'
+    tags:
+      - 'v*.*.*'  # Triggers the build when you push a tag like v1.0.0
 
 jobs:
   build:
@@ -25,15 +27,42 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
+      # ==========================================
+      # 1. YOLO SAFETY NODE
+      # ==========================================
+      - name: Extract Docker metadata for YOLO
+        id: meta-yolo
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ secrets.DOCKERHUB_USERNAME }}/worx-yolo-safety
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=ref,event=branch
+            type=semver,pattern={{version}}
+
       - name: Build YOLO Safety
         uses: docker/build-push-action@v6
         with:
           context: ./yolo_safety_node
           push: true
           platforms: linux/arm64,linux/amd64
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/worx-yolo-safety:latest
+          tags: ${{ steps.meta-yolo.outputs.tags }}
+          labels: ${{ steps.meta-yolo.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      # ==========================================
+      # 2. TOF SENSORS NODE
+      # ==========================================
+      - name: Extract Docker metadata for TOF
+        id: meta-tof
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ secrets.DOCKERHUB_USERNAME }}/worx-tof-sensors
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=ref,event=branch
+            type=semver,pattern={{version}}
 
       - name: Build TOF Sensors
         uses: docker/build-push-action@v6
@@ -41,9 +70,23 @@ jobs:
           context: ./tof_sensor_node
           push: true
           platforms: linux/arm64,linux/amd64
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/worx-tof-sensors:latest
+          tags: ${{ steps.meta-tof.outputs.tags }}
+          labels: ${{ steps.meta-tof.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      # ==========================================
+      # 3. ROSBRIDGE WEBSOCKET
+      # ==========================================
+      - name: Extract Docker metadata for Rosbridge
+        id: meta-rosbridge
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ secrets.DOCKERHUB_USERNAME }}/worx-rosbridge
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=ref,event=branch
+            type=semver,pattern={{version}}
 
       - name: Build Rosbridge WebSocket
         uses: docker/build-push-action@v6
@@ -51,7 +94,7 @@ jobs:
           context: ./rosbridge_websocket
           push: true
           platforms: linux/arm64,linux/amd64
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/worx-rosbridge:latest
+          tags: ${{ steps.meta-rosbridge.outputs.tags }}
+          labels: ${{ steps.meta-rosbridge.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-
