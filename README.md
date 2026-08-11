@@ -1,6 +1,6 @@
 # 🚜 Worx ROS 2 Autonomous Mower
 
-[![Status: ALPHA](https://img.shields.io/badge/Status-ALPHA-red.svg)](#) [![CI/CD Build](https://github.com/Ragsie/worx-ros2-mower/actions/workflows/docker-build.yml/badge.svg)](https://github.com/Ragsie/worx-ros2-mower/actions) [![ROS 2](https://img.shields.io/badge/ROS_2-Humble-blue?logo=ros)](https://docs.ros.org/en/humble/index.html) [![Docker YOLO](https://img.shields.io/docker/pulls/ragsie/worx-yolo-safety?logo=docker&label=YOLO)](https://hub.docker.com/r/ragsie/worx-yolo-safety) [![Docker ROSBridge](https://img.shields.io/docker/pulls/ragsie/worx-rosbridge?logo=docker&label=ROSBridge)](https://hub.docker.com/r/ragsie/worx-rosbridge)
+[![Status: ALPHA](https://img.shields.io/badge/Status-ALPHA-red.svg)](#) [![Build Worx Mower Containers](https://github.com/Ragsie/worx-ros2-mower/actions/workflows/docker_build.yml/badge.svg)](https://github.com/Ragsie/worx-ros2-mower/actions/workflows/docker_build.yml) [![ROS 2](https://img.shields.io/badge/ROS_2-Humble-blue?logo=ros)](https://docs.ros.org/en/humble/index.html) [![Docker YOLO](https://img.shields.io/docker/pulls/ragsie/worx-yolo-safety?logo=docker&label=YOLO)](https://hub.docker.com/r/ragsie/worx-yolo-safety) [![Docker ROSBridge](https://img.shields.io/docker/pulls/ragsie/worx-rosbridge?logo=docker&label=ROSBridge)](https://hub.docker.com/r/ragsie/worx-rosbridge)
 
 
 
