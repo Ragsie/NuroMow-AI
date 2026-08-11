@@ -12,7 +12,7 @@ services:
 
   # 2. YOLO AI SAFETY NODE (Pulled from external registry or built locally)
   yolo_safety:
-    image: ragsie/worx_yolo_safety:latest
+    image: ragsie/worx-yolo-safety:latest
     container_name: yolo_safety
     network_mode: "host"
     devices:
@@ -21,7 +21,7 @@ services:
 
   # 3. TOF SENSOR NODE
   tof_sensors:
-    image: ragsie/worx_tof_sensors:latest
+    image: ragsie/worx-tof-sensors:latest
     container_name: tof_sensors
     network_mode: "host"
     devices:
@@ -30,7 +30,7 @@ services:
 
   # 4. ROSBRIDGE WEB SOCKET (For Foxglove / Web UI)
   rosbridge:
-    image: ragsie/worx_rosbridge:latest
+    image: ragsie/worx-rosbridge:latest
     # NOTE: If pulling fails, uncomment the 'build' line below and point it to the folder with the Dockerfile
     # build: ./path_to_your_rosbridge_folder
     container_name: rosbridge
