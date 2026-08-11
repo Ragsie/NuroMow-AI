@@ -25,8 +25,8 @@ rcl_allocator_t allocator;
 rcl_node_t node;
 
 // --- PHYSICAL DIMENSIONS ---
-const float WHEEL_RADIUS = 0.112; 
-const float WHEEL_BASE = 0.403;
+const float WHEEL_RADIUS = 0.1075; // 107.5 mm
+const float WHEEL_BASE = 0.350;   // 350 mm
 
 // --- SAFETY FLAGS (Split into Physical and AI) ---
 volatile bool bumper_e_stop_active = false; 
