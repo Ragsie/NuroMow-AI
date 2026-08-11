@@ -4,7 +4,8 @@
 #include <rclc/rclc.h>
 #include <rclc/executor.h>
 #include <geometry_msgs/msg/twist.h>
-#include <std_msgs/msg/bool.h> // NEW: We need true/false (Bool) messages
+#include <geometry_msgs/msg/vector3.h> // Used for dynamic configuration updates
+#include <std_msgs/msg/bool.h>
 #include "driver/twai.h"
 
 // --- PIN DEFINITIONS ---
@@ -16,35 +17,38 @@
 rcl_subscription_t cmd_vel_subscriber;
 geometry_msgs__msg__Twist twist_msg;
 
-rcl_subscription_t e_stop_subscriber; // NEW: An extra subscriber for emergency stop
-std_msgs__msg__Bool e_stop_msg;       // NEW: Variable to store the emergency stop message
+rcl_subscription_t e_stop_subscriber;
+std_msgs__msg__Bool e_stop_msg;
+
+rcl_subscription_t config_subscriber;                  // NEW: Subscription for dynamic configuration
+geometry_msgs__msg__Vector3 config_msg;                // NEW: Stores incoming configuration values
 
 rclc_executor_t executor;
 rclc_support_t support;
 rcl_allocator_t allocator;
 rcl_node_t node;
 
-// --- PHYSICAL DIMENSIONS ---
-const float WHEEL_RADIUS = 0.1075; // 107.5 mm
-const float WHEEL_BASE = 0.350;   // 350 mm
+// --- DYNAMIC PHYSICAL DIMENSIONS (Mutable for runtime updates) ---
+float wheel_radius = 0.1075; // Default: 10.75 cm (converted to meters)
+float wheel_base = 0.350;    // Default: 35.0 cm track width (converted to meters)
 
-// --- SAFETY FLAGS (Split into Physical and AI) ---
-volatile bool bumper_e_stop_active = false; 
-bool ai_e_stop_active = false; 
+// --- SAFETY FLAGS ---
+volatile bool bumper_e_stop_active = false;
+bool ai_e_stop_active = false;
 
 // --- VESC CAN-BUS CONSTANTS ---
-const uint8_t VESC_ID_RIGHT = 1; 
-const uint8_t VESC_ID_LEFT = 2;  
-const uint32_t VESC_CAN_PACKET_SET_RPM = 3; 
-const int POLE_PAIRS = 15; // Remember to update this value from the VESC Tool!
+const uint8_t VESC_ID_RIGHT = 1;
+const uint8_t VESC_ID_LEFT = 2;
+const uint32_t VESC_CAN_PACKET_SET_RPM = 3;
+const int POLE_PAIRS = 15; // Motor pole pairs (update if needed via VESC Tool)
 
 // --- HELPER FUNCTION: Send RPM to VESC ---
 void send_vesc_rpm(uint8_t controller_id, float target_rpm) {
   twai_message_t message;
   message.identifier = (VESC_CAN_PACKET_SET_RPM << 8) | controller_id;
-  message.extd = 1; 
-  message.rtr = 0;  
-  message.data_length_code = 4; 
+  message.extd = 1;
+  message.rtr = 0;
+  message.data_length_code = 4;
   
   int32_t erpm = (int32_t)(target_rpm * POLE_PAIRS);
   
@@ -56,30 +60,40 @@ void send_vesc_rpm(uint8_t controller_id, float target_rpm) {
   twai_transmit(&message, pdMS_TO_TICKS(1));
 }
 
-// --- KINEMATICS ---
+// --- KINEMATICS (Using dynamic variables) ---
 void calculate_motor_rpm(float v, float omega, float &rpm_right, float &rpm_left) {
-  float v_r = v + (omega * WHEEL_BASE / 2.0);
-  float v_l = v - (omega * WHEEL_BASE / 2.0);
-  rpm_right = (v_r * 60.0) / (2.0 * PI * WHEEL_RADIUS);
-  rpm_left  = (v_l * 60.0) / (2.0 * PI * WHEEL_RADIUS);
+  float v_r = v + (omega * wheel_base / 2.0);
+  float v_l = v - (omega * wheel_base / 2.0);
+  rpm_right = (v_r * 60.0) / (2.0 * PI * wheel_radius);
+  rpm_left  = (v_l * 60.0) / (2.0 * PI * wheel_radius);
 }
 
-// --- ISR: Physical shield hits an obstacle ---
+// --- ISR: Physical bumper hits an obstacle ---
 void IRAM_ATTR shieldHitISR() {
   bumper_e_stop_active = true;
 }
 
-// --- NEW CALLBACK: YOLO AI sends an e-stop signal ---
+// --- CALLBACK: YOLO AI sends an emergency stop signal ---
 void e_stop_callback(const void * msgin) {
   const std_msgs__msg__Bool * msg = (const std_msgs__msg__Bool *)msgin;
-  
-  // Update flag (True if danger is detected, False if the coast is clear)
   ai_e_stop_active = msg->data;
 
-  // If AI detects danger, force the wheels to 0 RPM immediately!
   if (ai_e_stop_active) {
     send_vesc_rpm(VESC_ID_RIGHT, 0.0);
     send_vesc_rpm(VESC_ID_LEFT, 0.0);
+  }
+}
+
+// --- NEW CALLBACK: Update kinematics parameters dynamically at runtime ---
+void config_callback(const void * msgin) {
+  const geometry_msgs__msg__Vector3 * msg = (const geometry_msgs__msg__Vector3 *)msgin;
+  
+  // Only update if values are valid (greater than zero)
+  if (msg->x > 0.0) {
+    wheel_radius = msg->x;
+  }
+  if (msg->y > 0.0) {
+    wheel_base = msg->y;
   }
 }
 
@@ -87,13 +101,31 @@ void e_stop_callback(const void * msgin) {
 void cmd_vel_callback(const void * msgin) {
   const geometry_msgs__msg__Twist * msg = (const geometry_msgs__msg__Twist *)msgin;
   
-  // Safety check: Ignore command if bumper is hit OR AI sees a hazard!
+  // Safety check: Ignore command if bumper is hit OR AI sees a hazard
   if (bumper_e_stop_active || ai_e_stop_active) {
-    return; 
+    return;
   }
 
   float linear_x = msg->linear.x;
   float angular_z = msg->angular.z;
+
+  // --- ANTI-LAWN-TEARING FILTER ---
+  // If the robot is commanded to turn sharply (high angular_z) 
+  // without significant forward or backward movement (linear_x is near 0)
+  if (abs(linear_x) < 0.05 && abs(angular_z) > 0.0) {
+    
+    // Heavily restrict the rotation speed so it turns ultra-slowly, 
+    // if it absolutely MUST turn in place (e.g., to back out of a tight corner).
+    if (angular_z > 0) {
+        angular_z = 0.2;  // Slow rotation to the left
+    } else {
+        angular_z = -0.2; // Slow rotation to the right
+    }
+    
+    // Alternatively, you can force it to move slightly forward/backward while turning:
+    // linear_x = (linear_x >= 0) ? 0.05 : -0.05; 
+  }
+  // --------------------------------
 
   float rpm_right = 0.0;
   float rpm_left = 0.0;
@@ -118,35 +150,42 @@ void setup() {
   }
 
   set_microros_transports();
-  delay(2000); 
+  delay(2000);
   
   allocator = rcl_get_default_allocator();
   rclc_support_init(&support, 0, NULL, &allocator);
   rclc_node_init_default(&node, "esp32_drive_controller", "", &support);
 
-  // Subscribe to /cmd_vel (Driving)
+  // Subscribe to /cmd_vel (Robot driving commands)
   rclc_subscription_init_default(
     &cmd_vel_subscriber, &node,
     ROSIDL_GET_MSG_TYPE_SUPPORT(geometry_msgs, msg, Twist), "/cmd_vel"
   );
 
-  // NEW: Subscribe to /e_stop (AI Safety)
+  // Subscribe to /e_stop (AI Safety emergency stop)
   rclc_subscription_init_default(
     &e_stop_subscriber, &node,
     ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Bool), "/e_stop"
   );
 
-  // NOTE: We changed the executor capacity from 1 to 2 because we now have TWO subscriptions to handle!
-  rclc_executor_init(&executor, &support.context, 2, &allocator);
+  // NEW: Subscribe to /robot_config (Dynamic parameter tuning)
+  rclc_subscription_init_default(
+    &config_subscriber, &node,
+    ROSIDL_GET_MSG_TYPE_SUPPORT(geometry_msgs, msg, Vector3), "/robot_config"
+  );
+
+  // Increased executor capacity to 3 since we now have 3 subscriptions!
+  rclc_executor_init(&executor, &support.context, 3, &allocator);
   rclc_executor_add_subscription(&executor, &cmd_vel_subscriber, &twist_msg, &cmd_vel_callback, ON_NEW_DATA);
   rclc_executor_add_subscription(&executor, &e_stop_subscriber, &e_stop_msg, &e_stop_callback, ON_NEW_DATA);
+  rclc_executor_add_subscription(&executor, &config_subscriber, &config_msg, &config_callback, ON_NEW_DATA);
 }
 
 void loop() {
   rclc_executor_spin_some(&executor, RCL_MS_TO_NS(10));
 
-  // Reset logic for the physical shield
+  // Reset logic for the physical bumper
   if (bumper_e_stop_active && digitalRead(SHIELD_SENSOR_PIN) == HIGH) {
-    bumper_e_stop_active = false; 
+    bumper_e_stop_active = false;
   }
 }
