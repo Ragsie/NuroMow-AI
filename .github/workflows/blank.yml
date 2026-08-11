@@ -67,22 +67,13 @@ jobs:
           python -m pip install --upgrade pip
           pip install platformio
 
-      - name: Build ESP32 kode (Mappe 1)
+      - name: Build Cutter Controller
         run: |
-          pio run -d "Esp32's/Cutter_Contoller"
+          pio run -d "Esp32's/Cutter_Controller"
 
-      - name: Build ESP32 kode (Mappe 2)
+      - name: Build Drive Controller
         run: |
-          pio run -d "Esp32's/Drive_Contoller"
-
-      - name: Run C++ tests
-        run: |
-          # cd build # skip for now
-          # Option A: If you use CTest (standard with CMake)
-          #  ctest --output-on-failure # skip for now
-          
-          # Option B: If you compile a specific test executable, run it directly
-          # ./my_test_executable
+          pio run -d "Esp32's/Drive_Controller"
 
   docker-check:
     name: Dockerfile Build Test
