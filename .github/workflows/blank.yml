@@ -85,7 +85,12 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Test Docker build
+      - name: Test Docker build for ToF Sensor
         run: |
-          # Builds the Dockerfile to ensure there are no syntax errors
-          docker build -t test-image .
+          # Build ToF sensor Dockerfile
+          docker build -t tof-sensor-test -f tof_sensor_node/Dockerfile tof_sensor_node/
+
+      - name: Test Docker build for yolo ai node
+        run: |
+         # build YOLO safty Dockerfile
+         docker build -t second-docker-test -f yolo_safety_node/Dockerfile yolo_safety_node/
