@@ -79,7 +79,7 @@ For now to keep things manageable, I have divided the build into logical phases:
 - [x] code and make docker for pi
 - [ ] Install ROS 2 and configure Nav2 on the Raspberry Pi.
 - [ ] Feed RTK-fixed NMEA data from the Quectel GPS to ROS via USB.
-- [ x Implement Smac Planner to allow for reversing (Y-turns in sharp corners).
+- [x] Implement Smac Planner to allow for reversing (Y-turns in sharp corners).
 
 ### Phase 5: Field Testing & Tuning
 - [ ] Record the first geofence polygon using a controller.
@@ -92,7 +92,7 @@ For now to keep things manageable, I have divided the build into logical phases:
 - [x] Create a custom ROS 2 node that listens to the VL53L5X ToF sensors.
 - [x] Implement "Pause Routing": When ToF and video detects an anomaly if it takes too long processing, halts the mower completely to prevent accidents.
 - [x] continuos 1-2fps camera to stream.
-- [x] Run lightweight object detection (e.g., YOLOv8-Nano) directly on the Pi 4B CPU.
+- [x] Run lightweight object detection (e.g., YOLOv26-Nano) directly on the Pi 4B CPU.
 - [x] Dynamic logic: If the AI confirms a hazard (toy/animal), route around it. If it's a false alarm (tall dandelion), resume straight path.
 - [ ] Train YOLO26 on dog toys and poo to enhance voidance 
 
