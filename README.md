@@ -1,3 +1,6 @@
+# 🚧 Beta software and hardward setup🚧
+   * damage to your equipment may occur
+
 # Landroid_Mower_Upgrade
 Taking my old landroid mower, and make it SMART.
 
@@ -259,10 +262,12 @@ Here is a diagram of how the logic is gonna be connected. (changes may occur)
 
 
 ### buy me a cup of coffie
-I have used alot of time on this project.
+It would make my day
+| Coin | QR | Address |
+| :-- | :--- | :---: |
+| Bitcoincash | <img width="160" height="161" alt="qrcode" src="https://github.com/user-attachments/assets/254aece9-8957-4d34-812c-885ac2e839fa" /> | bitcoincash:qzp4c7klef8q6gxycvc84dx0fnhnfxkkpy6xda56h3 |
+| Bitcoin | <img width="160" height="162" alt="image" src="https://github.com/user-attachments/assets/e5b1cd3d-fd26-46fc-88db-2aa931b4f5d4" /> | 3QrAPVGC3aypf3LG5DYYRnjwjKuFMzkeJE |
 
-bitcoincash
 
-<img width="237" height="205" alt="image" src="https://github.com/user-attachments/assets/c13ef40b-aca1-45da-8473-332744b63b28" />
 
-bitcoincash:qzp4c7klef8q6gxycvc84dx0fnhnfxkkpy6xda56h3
+                                                                              
