@@ -7,8 +7,8 @@ RUN apt-get update && apt-get install -y \
     i2c-tools \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Python libraries for I2C (smbus2 is the standard for Raspberry Pi)
-RUN pip3 install --no-cache-dir smbus2
+# Install Python libraries for I2C and the VL53L5X sensor logic
+RUN pip3 install --no-cache-dir smbus2 vl53l5cx
 
 # Set the working directory inside the container
 WORKDIR /app
