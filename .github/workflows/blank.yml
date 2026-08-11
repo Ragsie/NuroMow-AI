@@ -69,11 +69,11 @@ jobs:
       
       - name: Build Cutter Controller
         run: |
-          pio run -d "Esp32's/Cutter_Controller/"
+          pio run -d Esp32's/Cutter_Controller/
 
       - name: Build Drive Controller
         run: |
-          pio run -d "Esp32's/Drive_Controller/"
+          pio run -d Esp32's/Drive_Controller/
 
   docker-check:
     name: Dockerfile Build Test
