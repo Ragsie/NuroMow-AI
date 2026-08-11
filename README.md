@@ -94,7 +94,7 @@ For now to keep things manageable, I have divided the build into logical phases:
 - [x] continuos 1-2fps camera to stream.
 - [x] Run lightweight object detection (e.g., YOLOv26-Nano) directly on the Pi 4B CPU.
 - [x] Dynamic logic: If the AI confirms a hazard (toy/animal), route around it. If it's a false alarm (tall dandelion), resume straight path.
-- [ ] Train YOLO26 on dog toys and poo to enhance voidance 
+- [ ] Train YOLO26 on dog toys, poo, humans, cats, lawn edge to enhance voidance 
 
 ### Extras that did not fit phase 1-6
 
