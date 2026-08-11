@@ -66,21 +66,14 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install platformio
-
-      - name: Se hvad der ligger i mappen (Debug)
-        run: |
-          echo "Leder i roden af projektet:"
-          ls -la
-          echo "Leder inde i Esp32's/Cutter_Controller:"
-          ls -la "Esp32's/Cutter_Controller" || echo "Mappen findes ikke med det navn!"
       
       - name: Build Cutter Controller
         run: |
-          pio run -d "Esp32's/Cutter_Controller"
+          pio run -d "Esp32's/Cutter_Controller/"
 
       - name: Build Drive Controller
         run: |
-          pio run -d "Esp32's/Drive_Controller"
+          pio run -d "Esp32's/Drive_Controller/"
 
   docker-check:
     name: Dockerfile Build Test
