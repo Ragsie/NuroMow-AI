@@ -50,24 +50,33 @@ jobs:
           # Finds all .sh files in the repo and checks them for errors
           find . -type f -name "*.sh" -exec shellcheck {} +
 
-  cpp-test:
-    name: C++ Build & Test
+  esp32-build:
+    name: ESP32 Build (PlatformIO)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install C++ dependencies (CMake and GCC)
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y build-essential cmake
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
 
-      - name: Build C++ code
+      - name: Install PlatformIO
         run: |
-          mkdir build
-          cd build
-          cmake ..
-          make
+          python -m pip install --upgrade pip
+          pip install platformio
+
+      - name: Build ESP32 kode (Mappe 1)
+        run: |
+          # Flaget '-d' fortæller PlatformIO, hvilken mappe den skal bygge.
+          # UDSKIFT 'sti/til/mappe_1' med navnet på din første mappe
+          pio run -d ESP32's/Cutter_Contoller
+
+      - name: Build ESP32 kode (Mappe 2)
+        run: |
+          # UDSKIFT 'sti/til/mappe_2' med navnet på din anden mappe
+          pio run -d ESP32's/Drive_Contoller
 
       - name: Run C++ tests
         run: |
