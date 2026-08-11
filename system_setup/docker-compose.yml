@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # 1. MICRO-ROS AGENT
   microros_agent:
@@ -12,7 +10,7 @@ services:
     command: serial --dev /dev/ttyUSB0 -v6
     restart: unless-stopped
 
-  # 2. YOLO AI SAFETY NODE (Pulled from your external registry)
+  # 2. YOLO AI SAFETY NODE (Pulled from external registry or built locally)
   yolo_safety:
     image: ragsie/worx_yolo_safety:latest
     container_name: yolo_safety
@@ -33,6 +31,8 @@ services:
   # 4. ROSBRIDGE WEB SOCKET (For Foxglove / Web UI)
   rosbridge:
     image: ragsie/worx_rosbridge:latest
+    # NOTE: If pulling fails, uncomment the 'build' line below and point it to the folder with the Dockerfile
+    # build: ./path_to_your_rosbridge_folder
     container_name: rosbridge
     network_mode: "host"
     restart: unless-stopped

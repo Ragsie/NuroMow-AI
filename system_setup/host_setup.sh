@@ -5,6 +5,13 @@
 
 echo "🚀 Preparing host machine for Docker-based Worx Mower..."
 
+# Check if the effective user ID (EUID) is NOT equal to 0
+if [ "$EUID" -ne 0 ]; then
+  echo "Error: This script must be run with sudo!"
+  exit 1
+fi
+echo "The script is now running with root privileges!"
+
 # 1. Remove unnecessary background services (Debloat to save CPU/RAM)
 echo "🧹 Removing background bloatware (snapd, cloud-init, modemmanager, etc.)..."
 sudo systemctl stop snapd
@@ -57,9 +64,9 @@ fi
 # Check if containers are actually running before cleaning up
 if docker compose ps | grep -q "Up"; then
     echo "🧹 Cleaning up temporary repository files..."
-    # Find the path where the script is running from, and go up one level
-    CURRENT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-    PROJECT_ROOT="$(dirname "$CURRENT_DIR")"
+     Find the path where the script is running from, and go up one level
+     CURRENT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+     PROJECT_ROOT="$(dirname "$CURRENT_DIR")"
 
     # Ensure we don't accidentally delete the system root!
     if [[ "$PROJECT_ROOT" == /home/* ]]; then
@@ -73,4 +80,5 @@ fi
 echo "✅ Host provisioning & deployment complete!"
 echo "⚠️ Please note: Group permissions (docker, i2c, dialout, video) require a re-login or reboot to take effect."
 echo "🔄 Rebooting the system to apply changes..."
+wait 5
 sudo reboot
