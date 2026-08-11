@@ -136,7 +136,7 @@ The ESP32 translates ROS 2 /cmd_vel topics into CAN-bus RPM commands for the VES
 6. Once compiled successfully, click the Upload (→) button to flash the firmware.
 
 
-###🔌 Wiring Reference
+### 🔌 Wiring Reference
 ESP32 to VESC (CAN-bus via SN65HVD230):
 
   * ESP32 3.3V ➔ Transceiver VCC
@@ -240,7 +240,7 @@ Here is a diagram of how the logic is gonna be connected. (changes may occur)
 
 
 ### buy me a cup of coffie
-It would make my day
+It would make my day and support me develop more
 | Coin | QR | Address |
 | :-- | :--- | :---: |
 | Bitcoincash | <img width="160" height="161" alt="qrcode" src="https://github.com/user-attachments/assets/254aece9-8957-4d34-812c-885ac2e839fa" /> | bitcoincash:qzp4c7klef8q6gxycvc84dx0fnhnfxkkpy6xda56h3 |
