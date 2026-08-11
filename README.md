@@ -113,28 +113,14 @@ Before running the Docker containers, the host machine (Raspberry Pi or Mini PC)
    cd worx-ros2-mower/system_setup
 
    # 2. Run the script
-   chmod +x prepare_host.sh
-   ./prepare_host.sh
+   chmod +x host_setup.sh
+   ./host_setup.sh
    ```
 
 3. The system will automatically reboot when finished.
 
-### Phase 2: Deploying the Docker Stack
-Once the host is prepared and rebooted, you can deploy the entire ROS 2 and AI stack with a single command.
 
-1. Clone this repository to your host machine:
-   ```
-   git clone [https://github.com/Ragsie/worx-ros2-mower.git](https://github.com/Ragsie/worx-ros2-mower.git)
-   cd worx-ros2-mower
-   ```
-
-2. Build and start the containers in the background:
-   ```
-   docker compose up -d --build
-   ```
-Note: The first build will take several minutes as it downloads ROS 2, PyTorch, and YOLO dependencies. Subsequent startups will take just a few seconds.
-
-### Phase 3: Flashing the ESP32 Drive Controller
+### Phase 2: Flashing the ESP32 Drive Controller
 The ESP32 translates ROS 2 /cmd_vel topics into CAN-bus RPM commands for the VESCs, and handles the physical bumper interrupts.
 
 1. Open Visual Studio Code on your PC.

@@ -45,14 +45,29 @@ sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin 
 sudo usermod -aG docker "$USER"
 
 echo "📥 Pulling latest Docker containers from Docker Hub..."
-# Sørg for at stå i den mappe hvor din docker-compose.yml ligger, før du kører scriptet,
-# eller angiv stien dertil. Her antager vi, at scriptet køres fra projektmappen.
+# Make sure you are in the directory where your docker-compose.yml is located before running the script,
+# or specify the path to it. Here we assume the script is run from the project directory.
+echo "📥 Pulling latest Docker containers from Docker Hub..."
 if [ -f "docker-compose.yml" ]; then
     docker compose pull
     echo "🚀 Starting Docker containers..."
     docker compose up -d
+fi
+
+# Check if containers are actually running before cleaning up
+if docker compose ps | grep -q "Up"; then
+    echo "🧹 Cleaning up temporary repository files..."
+    # Find the path where the script is running from, and go up one level
+    CURRENT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    PROJECT_ROOT="$(dirname "$CURRENT_DIR")"
+
+    # Ensure we don't accidentally delete the system root!
+    if [[ "$PROJECT_ROOT" == /home/* ]]; then
+        echo "🗑️ Deleting project folder: $PROJECT_ROOT"
+        rm -rf "$PROJECT_ROOT"
+    fi
 else
-    echo "⚠️ docker-compose.yml not found in current directory. Skipping pull/up."
+    echo "⚠️ Docker containers failed to start. Please check the logs. Skipping cleanup."
 fi
 
 echo "✅ Host provisioning & deployment complete!"
