@@ -40,3 +40,12 @@ jobs:
           push: true
           platforms: linux/arm64
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/worx-tof-sensors:latest
+
+      - name: Build Rosbridge WebSocket
+        uses: docker/build-push-action@v6
+        with:
+          context: ./rosbridge_websocket
+          push: true
+          platforms: linux/arm64
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/worx-rosbridge:latest
+
