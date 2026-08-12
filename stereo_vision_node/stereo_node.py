@@ -25,13 +25,17 @@ class StereoVisionNode(Node):
             self.get_logger().error('Failed to init NPU runtime!')
 
         # 2. Setup Camera Configuration (Pulled from Docker Environment Variables)
-        # We use os.getenv to fetch values from docker-compose.yml. 
-        # If they don't exist, it falls back to the default values (2560x720 @ 10fps).
         cam_width = int(os.getenv('CAMERA_WIDTH', '2560'))
         cam_height = int(os.getenv('CAMERA_HEIGHT', '720'))
         cam_fps = int(os.getenv('CAMERA_FPS', '10'))
+        
+        # Physical camera parameters for real-world depth calculation
+        self.baseline = float(os.getenv('CAMERA_BASELINE', '0.06')) # 6 cm default
+        self.focal_length = float(os.getenv('CAMERA_FOCAL_LENGTH', '700.0')) # Pixels
+        self.min_safe_distance = float(os.getenv('MIN_SAFE_DISTANCE', '1.0')) # Meters
 
         self.get_logger().info(f'Configuring camera to {cam_width}x{cam_height} at {cam_fps} FPS')
+        self.get_logger().info(f'Stereo Params: Baseline={self.baseline}m, Focal Length={self.focal_length}px')
 
         # 3. Initialize Stereo Camera (GXIVISION 720P)
         self.cap = cv2.VideoCapture(0)
@@ -54,7 +58,6 @@ class StereoVisionNode(Node):
 
         self.danger_classes = [0, 15, 16] # Person, Cat, Dog
         
-        # Determine the timer speed based on the desired camera FPS
         timer_period = 1.0 / float(cam_fps)
         self.timer = self.create_timer(timer_period, self.timer_callback)
 
@@ -72,21 +75,27 @@ class StereoVisionNode(Node):
 
         danger_detected = False
 
-        # --- DEPTH CHECK ---
+        # --- DEPTH CHECK (Real-world meters) ---
         gray_left = cv2.cvtColor(left_img, cv2.COLOR_BGR2GRAY)
         gray_right = cv2.cvtColor(right_img, cv2.COLOR_BGR2GRAY)
         disparity = self.stereo.compute(gray_left, gray_right)
         
-        # Calculate rough depth (Requires actual calibration constants for your specific GXIVISION lens)
-        # If the center area is extremely close, trigger stop.
-        center_disp = np.mean(disparity[h//2-50:h//2+50, half_w//2-50:half_w//2+50])
-        if center_disp > 400: # Threshold depends on calibration
-            self.get_logger().warn('E-STOP: Physical object too close (Depth)!')
-            danger_detected = True
+        # Calculate disparity in the center of the view
+        center_disp_raw = np.mean(disparity[h//2-50:h//2+50, half_w//2-50:half_w//2+50])
+        # StereoSGBM multiplies disparity by 16 for sub-pixel accuracy, so we divide by 16
+        center_disp = center_disp_raw / 16.0 
+
+        # Prevent division by zero
+        if center_disp > 0:
+            # Formula: Depth = (Focal Length * Baseline) / Disparity
+            depth_meters = (self.focal_length * self.baseline) / center_disp
+            
+            if depth_meters < self.min_safe_distance:
+                self.get_logger().warn(f'E-STOP: Object too close! Distance: {depth_meters:.2f}m')
+                danger_detected = True
 
         # --- NPU YOLO CHECK (Running on left image) ---
         if not danger_detected:
-            # Resize image to match YOLO input (e.g., 640x640)
             img_resized = cv2.resize(left_img, (640, 640))
             img_rgb = cv2.cvtColor(img_resized, cv2.COLOR_BGR2RGB)
             
@@ -94,8 +103,6 @@ class StereoVisionNode(Node):
             outputs = self.rknn.inference(inputs=[img_rgb])
             
             # (Post-processing logic for RKNN YOLO outputs goes here)
-            # This involves parsing the output tensor to find class_ids and confidences.
-            # Assuming a parsed list of detected class_ids:
             detected_classes = [] # Placeholder for parsed output
             
             for class_id in detected_classes:
