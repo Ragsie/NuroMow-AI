@@ -10,23 +10,23 @@ services:
     command: serial --dev /dev/ttyUSB0 -v6
     restart: unless-stopped
 
-  # 2. YOLO AI SAFETY NODE (Pulled from external registry or built locally)
-  yolo_safety:
-    image: ragsie/worx-yolo-safety:latest
-    container_name: yolo_safety
-    network_mode: "host"
-    devices:
-      - "/dev/video0:/dev/video0" 
-    restart: unless-stopped
+  # 2. YOLO AI SAFETY NODE (Pulled from external registry or built locally) being faced out
+ # yolo_safety:
+  #  image: ragsie/worx-yolo-safety:latest
+  #  container_name: yolo_safety
+  #  network_mode: "host"
+  #  devices:
+  #    - "/dev/video0:/dev/video0" 
+  #  restart: unless-stopped
 
-  # 3. TOF SENSOR NODE
-  tof_sensors:
-    image: ragsie/worx-tof-sensors:latest
-    container_name: tof_sensors
-    network_mode: "host"
-    devices:
-      - "/dev/i2c-1:/dev/i2c-1" 
-    restart: unless-stopped
+  # 3. TOF SENSOR NODE being faced out
+ # tof_sensors:
+  #  image: ragsie/worx-tof-sensors:latest
+  #  container_name: tof_sensors
+  #  network_mode: "host"
+  #  devices:
+  #    - "/dev/i2c-1:/dev/i2c-1" 
+  #  restart: unless-stopped
 
   # 4. ROSBRIDGE WEB SOCKET (For Foxglove / Web UI)
   rosbridge:
@@ -43,4 +43,13 @@ services:
     container_name: ros2_nav
     network_mode: "host"
     command: tail -f /dev/null 
+    restart: unless-stopped
+
+    stereo_vision:
+    image: ragsie/worx-stereo-vision:latest
+    container_name: stereo_vision
+    network_mode: "host"
+    privileged: true # Required for direct NPU (/dev/rknn) access on Orange Pi
+    volumes:
+      - /dev:/dev # Mounts all devices, ensuring /dev/rknn and /dev/video* are available
     restart: unless-stopped
