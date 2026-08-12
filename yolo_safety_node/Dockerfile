@@ -1,24 +1,19 @@
-# Start from the official ROS 2 Humble base image
 FROM ros:humble-ros-base
 
-# Installer KUN python3-pip. Fjern libgl1 og libglib2.0-0, da headless ikke bruger dem.
 RUN apt-get update && apt-get install -y \
     python3-pip \
+    libgl1 \
+    libglib2.0-0 \
     && rm -rf /var/lib/apt/lists/*
 
-# Installer PyTorch CPU-versionen først
-RUN pip3 install --no-cache-dir torch torchvision --index-url https://download.pytorch.org/whl/cpu
+# Install OpenCV and dependencies
+RUN pip3 install --no-cache-dir opencv-python numpy
 
-# Installer ultralytics, afinstaller den tunge opencv-python automatisk, og installer den lette headless version
-RUN pip3 install --no-cache-dir ultralytics \
-    && pip3 uninstall -y opencv-python \
-    && pip3 install --no-cache-dir opencv-python-headless
+# Install Rockchip NPU runtime lite (Ensure this pip package is compatible with your Orange Pi OS version)
+# The exact URL might change depending on the RKNN toolkit version, but this is the standard approach:
+RUN pip3 install --no-cache-dir rknn-toolkit-lite2
 
-# Set the working directory inside the container
 WORKDIR /app
-
-# Kopier dine filer ind
 COPY . /app/
 
-# Kør dit script
-CMD ["python3", "yolo_node.py"]
+CMD ["python3", "stereo_node.py"]
