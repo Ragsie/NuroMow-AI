@@ -1,73 +1,110 @@
 import rclpy
 from rclpy.node import Node
-from std_msgs.msg import Bool  # We use a simple True/False message for the E-stop
+from std_msgs.msg import Bool
 import cv2
-from ultralytics import YOLO
+import numpy as np
+from rknnlite.api import RKNNLite # Rockchip NPU API
 
-class YoloSafetyNode(Node):
+class StereoVisionNode(Node):
     def __init__(self):
-        super().__init__('yolo_safety_node')
-
-        # 1. Create a Publisher that can send True/False messages on '/e_stop'
+        super().__init__('stereo_vision_node')
         self.publisher_ = self.create_publisher(Bool, 'e_stop', 10)
+        
+        # 1. Initialize NPU for YOLO
+        self.get_logger().info('Loading RKNN YOLO model onto NPU...')
+        self.rknn = RKNNLite()
+        
+        # NOTE: Model must be pre-converted to .rknn on a PC!
+        ret = self.rknn.load_rknn('./yolo26n.rknn')
+        if ret != 0:
+            self.get_logger().error('Failed to load RKNN model!')
+            
+        ret = self.rknn.init_runtime(core_mask=RKNNLite.NPU_CORE_AUTO)
+        if ret != 0:
+            self.get_logger().error('Failed to init NPU runtime!')
 
-        # 2. Load the AI model (Using the ultra-fast YOLO26 Nano)
-        self.get_logger().info('Loading YOLO model...')
-        self.model = YOLO("yolo26n.pt")
-
-        # 3. Start the camera (0 is default, change to 1 if using multiple cameras)
+        # 2. Initialize Stereo Camera (GXIVISION 720P)
+        # Often stereo cameras combine left/right into a single wide frame (e.g., 2560x720)
         self.cap = cv2.VideoCapture(0)
-        if not self.cap.isOpened():
-            self.get_logger().error('Critical error: Could not open camera!')
+        self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 2560) 
+        self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
 
-        # 4. Danger classes from COCO dataset: 0 = Person, 15 = Cat, 16 = Dog
-        self.danger_classes = [0, 15, 16]
+        # 3. Setup StereoBM for Depth Calculation
+        self.stereo = cv2.StereoSGBM_create(
+            minDisparity=0,
+            numDisparities=64, # Must be divisible by 16
+            blockSize=9,
+            P1=8 * 3 * 9 ** 2,
+            P2=32 * 3 * 9 ** 2,
+            disp12MaxDiff=1,
+            uniquenessRatio=10,
+            speckleWindowSize=100,
+            speckleRange=32
+        )
 
-        # 5. Create a timer that runs the callback exactly 1 time per second (1.0 Hz)
-        self.timer = self.create_timer(1.0, self.timer_callback)
-        self.get_logger().info('YOLO Safety Node started. Scanning for hazards...')
+        self.danger_classes = [0, 15, 16] # Person, Cat, Dog
+        self.timer = self.create_timer(1.0, self.timer_callback) # 1 FPS
 
     def timer_callback(self):
-        # Read a single frame from the camera
         ret, frame = self.cap.read()
         if not ret:
-            self.get_logger().warning('Lost connection to the camera!')
+            self.get_logger().warning('Lost connection to the stereo camera!')
             return
 
-        # Run AI on the frame (verbose=False keeps the terminal output clean)
-        results = self.model(frame, verbose=False)
+        # Split the side-by-side frame into left and right images
+        h, w, _ = frame.shape
+        half_w = w // 2
+        left_img = frame[:, :half_w]
+        right_img = frame[:, half_w:]
+
         danger_detected = False
 
-        # Check all objects that YOLO detected in this single frame
-        for box in results[0].boxes:
-            class_id = int(box.cls[0])
-            
-            # Was a person, dog, or cat detected?
-            if class_id in self.danger_classes:
-                class_name = self.model.names[class_id]
-                self.get_logger().warn(f'E-STOP TRIGGERED! Object in front of mower: {class_name.upper()}')
-                danger_detected = True
+        # --- DEPTH CHECK ---
+        gray_left = cv2.cvtColor(left_img, cv2.COLOR_BGR2GRAY)
+        gray_right = cv2.cvtColor(right_img, cv2.COLOR_BGR2GRAY)
+        disparity = self.stereo.compute(gray_left, gray_right)
+        
+        # Calculate rough depth (Requires actual calibration constants for your specific GXIVISION lens)
+        # If the center area is extremely close, trigger stop.
+        center_disp = np.mean(disparity[h//2-50:h//2+50, half_w//2-50:half_w//2+50])
+        if center_disp > 400: # Threshold depends on calibration
+            self.get_logger().warn('E-STOP: Physical object too close (Depth)!')
+            danger_detected = True
 
-        # Create the ROS message and publish it to the network
-        msg = Bool()
-        msg.data = danger_detected # Becomes True if danger, otherwise False
-        self.publisher_.publish(msg)
-
-        # Print a heartbeat message occasionally so we know it's alive (without spamming)
+        # --- NPU YOLO CHECK (Running on left image) ---
         if not danger_detected:
-            self.get_logger().info('Coast is clear.', throttle_duration_sec=5.0) 
+            # Resize image to match YOLO input (e.g., 640x640)
+            img_resized = cv2.resize(left_img, (640, 640))
+            img_rgb = cv2.cvtColor(img_resized, cv2.COLOR_BGR2RGB)
+            
+            # Run inference on NPU
+            outputs = self.rknn.inference(inputs=[img_rgb])
+            
+            # (Post-processing logic for RKNN YOLO outputs goes here)
+            # This involves parsing the output tensor to find class_ids and confidences.
+            # Assuming a parsed list of detected class_ids:
+            detected_classes = [] # Placeholder for parsed output
+            
+            for class_id in detected_classes:
+                if class_id in self.danger_classes:
+                    self.get_logger().warn('E-STOP: Danger class detected by NPU!')
+                    danger_detected = True
+                    break
+
+        # --- PUBLISH COMMAND ---
+        msg = Bool()
+        msg.data = danger_detected
+        self.publisher_.publish(msg)
 
 def main(args=None):
     rclpy.init(args=args)
-    node = YoloSafetyNode()
-    
+    node = StereoVisionNode()
     try:
-        # Spin keeps the script running until we shut it down
         rclpy.spin(node)
     except KeyboardInterrupt:
         pass
     finally:
-        # Shut down gracefully and release the webcam
+        node.rknn.release()
         node.cap.release()
         node.destroy_node()
         rclpy.shutdown()
