@@ -16,4 +16,4 @@ RUN pip3 install --no-cache-dir rknn-toolkit-lite2
 WORKDIR /app
 COPY . /app/
 
-CMD ["python3", "stereo_node.py"
+CMD ["python3", "stereo_node.py"]
