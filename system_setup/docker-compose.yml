@@ -45,11 +45,23 @@ services:
     command: tail -f /dev/null 
     restart: unless-stopped
 
-    stereo_vision:
+  stereo_vision:
     image: ragsie/worx-stereo-vision:latest
     container_name: stereo_vision
     network_mode: "host"
     privileged: true # Required for direct NPU (/dev/rknn) access on Orange Pi
     volumes:
       - /dev:/dev # Mounts all devices, ensuring /dev/rknn and /dev/video* are available
+    environment:
+      # --- CAMERA CONFIGURATION ---
+      - CAMERA_WIDTH=2560
+      - CAMERA_HEIGHT=720
+      - CAMERA_FPS=10
+      # --- STEREO CALIBRATION ---
+      # BASELINE: The physical distance between the two lenses in meters (e.g., 6 cm = 0.06)
+      - CAMERA_BASELINE=0.06
+      # FOCAL_LENGTH: The focal length in pixels (requires camera calibration, approx 700 for 720p)
+      - CAMERA_FOCAL_LENGTH=700.0
+      # MIN_SAFE_DISTANCE: The distance in meters that triggers the E-STOP
+      - MIN_SAFE_DISTANCE=1.0
     restart: unless-stopped
