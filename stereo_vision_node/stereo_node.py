@@ -3,6 +3,7 @@ from rclpy.node import Node
 from std_msgs.msg import Bool
 import cv2
 import numpy as np
+import os
 from rknnlite.api import RKNNLite # Rockchip NPU API
 
 class StereoVisionNode(Node):
@@ -23,13 +24,22 @@ class StereoVisionNode(Node):
         if ret != 0:
             self.get_logger().error('Failed to init NPU runtime!')
 
-        # 2. Initialize Stereo Camera (GXIVISION 720P)
-        # Often stereo cameras combine left/right into a single wide frame (e.g., 2560x720)
-        self.cap = cv2.VideoCapture(0)
-        self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 2560) 
-        self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
+        # 2. Setup Camera Configuration (Pulled from Docker Environment Variables)
+        # We use os.getenv to fetch values from docker-compose.yml. 
+        # If they don't exist, it falls back to the default values (2560x720 @ 10fps).
+        cam_width = int(os.getenv('CAMERA_WIDTH', '2560'))
+        cam_height = int(os.getenv('CAMERA_HEIGHT', '720'))
+        cam_fps = int(os.getenv('CAMERA_FPS', '10'))
 
-        # 3. Setup StereoBM for Depth Calculation
+        self.get_logger().info(f'Configuring camera to {cam_width}x{cam_height} at {cam_fps} FPS')
+
+        # 3. Initialize Stereo Camera (GXIVISION 720P)
+        self.cap = cv2.VideoCapture(0)
+        self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, cam_width) 
+        self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, cam_height)
+        self.cap.set(cv2.CAP_PROP_FPS, cam_fps)
+
+        # 4. Setup StereoBM for Depth Calculation
         self.stereo = cv2.StereoSGBM_create(
             minDisparity=0,
             numDisparities=64, # Must be divisible by 16
@@ -43,7 +53,10 @@ class StereoVisionNode(Node):
         )
 
         self.danger_classes = [0, 15, 16] # Person, Cat, Dog
-        self.timer = self.create_timer(1.0, self.timer_callback) # 1 FPS
+        
+        # Determine the timer speed based on the desired camera FPS
+        timer_period = 1.0 / float(cam_fps)
+        self.timer = self.create_timer(timer_period, self.timer_callback)
 
     def timer_callback(self):
         ret, frame = self.cap.read()
