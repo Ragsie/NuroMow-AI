@@ -1,6 +1,6 @@
 # 🚜 Worx ROS 2 Autonomous Mower
 
-[![Status: ALPHA](https://img.shields.io/badge/Status-ALPHA-red.svg)](#) [![Build Worx Mower Containers](https://github.com/Ragsie/worx-ros2-mower/actions/workflows/docker_build.yml/badge.svg)](https://github.com/Ragsie/worx-ros2-mower/actions/workflows/docker_build.yml) [![ROS 2](https://img.shields.io/badge/ROS_2-Humble-blue?logo=ros)](https://docs.ros.org/en/humble/index.html) [![Wiki Docs](https://img.shields.io/badge/Docs-Wiki-blue?logo=github)](https://github.com/Ragsie/worx-ros2-mower/wiki) [![CI Pipeline](https://github.com/Ragsie/worx-ros2-mower/actions/workflows/code_check.yml/badge.svg)](https://github.com/Ragsie/worx-ros2-mower/actions/workflows/code_check.yml) [![Docker YOLO](https://img.shields.io/docker/pulls/ragsie/worx-yolo-safety?logo=docker&label=YOLO)](https://hub.docker.com/r/ragsie/worx-yolo-safety) [![Docker ROSBridge](https://img.shields.io/docker/pulls/ragsie/worx-rosbridge?logo=docker&label=ROSBridge)](https://hub.docker.com/r/ragsie/worx-rosbridge) [![Docker ToF](https://img.shields.io/docker/pulls/ragsie/worx-tof-sensors?logo=docker&label=ToF)](https://hub.docker.com/r/ragsie/worx-tof-sensors)
+[![Status: ALPHA](https://img.shields.io/badge/Status-ALPHA-red.svg)](#) [![Build Worx Mower Containers](https://github.com/Ragsie/worx-ros2-mower/actions/workflows/docker_build.yml/badge.svg)](https://github.com/Ragsie/worx-ros2-mower/actions/workflows/docker_build.yml) [![ROS 2](https://img.shields.io/badge/ROS_2-Humble-blue?logo=ros)](https://docs.ros.org/en/humble/index.html) [![Wiki Docs](https://img.shields.io/badge/Docs-Wiki-blue?logo=github)](https://github.com/Ragsie/worx-ros2-mower/wiki) [![CI Pipeline](https://github.com/Ragsie/worx-ros2-mower/actions/workflows/code_check.yml/badge.svg)](https://github.com/Ragsie/worx-ros2-mower/actions/workflows/code_check.yml) [![Docker AIVision](https://img.shields.io/docker/pulls/ragsie/worx-stereo-vision?logo=docker&label=)](https://hub.docker.com/r/ragsie/worx-stereo-vision) [![Docker ROSBridge](https://img.shields.io/docker/pulls/ragsie/worx-rosbridge?logo=docker&label=ROSBridge)](https://hub.docker.com/r/ragsie/worx-rosbridge)
 
 
 > **🚧 ALPHA software and hardware setup 🚧**
@@ -14,7 +14,7 @@ This project started out of frustration: my current Worx M600 Plus has a bad hab
 I'll document the whole journey here. If you have a mower tearing up your lawn too, I hope this can serve as some inspiration for your own build.
 
 ## 🤖 About The Project
-An advanced, fully autonomous lawn mower built on a Worx Landroid chassis. This project upgrades the original hardware with a modern ROS 2 (Humble/Jazzy) stack, VESC motor controllers, I2C Time-of-Flight (ToF) sensors, and real-time AI vision using YOLO26 for ultimate safety.
+An advanced, fully autonomous lawn mower built on a Worx Landroid chassis. This project upgrades the original hardware with a modern ROS 2 (Humble/Jazzy) stack, VESC motor controllers, and real-time AI vision using depth calculation and YOLO26n for ultimate safety.
 
 ### 🌟 Features
 * **ROS 2 Nav2:** Dynamic path planning and obstacle avoidance.

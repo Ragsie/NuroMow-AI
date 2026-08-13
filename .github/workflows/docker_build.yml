@@ -35,7 +35,7 @@ jobs:
       # ===================================
       # 1. STEREO VISION & NPU YOLO NODE
       # ===================================
-      - name: Stereo Vision
+      - name: AIVision
         id: meta-stereo
         uses: docker/metadata-action@v5
         with:
