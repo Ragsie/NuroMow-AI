@@ -7,17 +7,47 @@ if [ "$EUID" -ne 0 ]; then
     exit 1
 fi
 
+# ==========================================
+# USER CONFIGURATION (EDIT THESE FOR TRUENAS)
+# ==========================================
+TRUENAS_IP="192.168.X.X" # Insert your jupyterlab IP here
+NFS_SHARE_PATH="/mnt/pool_name/deploy" # Insert the full path to your NFS share
+LOCAL_MOUNT_POINT="/mnt/nfs/deploy" 
+# ==========================================
+
 echo "Preparing Orange Pi 5 host machine for Docker-based Worx Mower..."
 
 # 1. Debloat
+echo "Removing bloatware..."
 sudo systemctl stop snapd
 sudo apt-get purge cloud-init snapd modemmanager multipath-tools unattended-upgrades -y
 sudo apt-get autoremove -y
 
-# 2. Update packages
+# 2. Update packages and install NFS tools
+echo "Updating system and installing NFS client..."
 sudo apt-get update && sudo apt-get upgrade -y
+sudo apt-get install nfs-common -y
 
-# 3. Grant hardware permissions (NPU, Serial, Video)
+# 3. Setup TrueNAS NFS Mount (Auto-mount on demand to prevent boot hangs over Wi-Fi)
+echo "Configuring persistent NFS mount for AI deployment..."
+sudo mkdir -p "$LOCAL_MOUNT_POINT"
+
+# Check if the mount is already in fstab to prevent duplicates on rerun
+if ! grep -q "$LOCAL_MOUNT_POINT" /etc/fstab; then
+    echo "Adding NFS entry to /etc/fstab..."
+    # x-systemd.automount ensures it only connects when the folder is accessed
+    # _netdev tells the system to wait for network availability
+    # soft,retrans=3,timeo=14 prevents permanent hangs on bad Wi-Fi
+    echo "$TRUENAS_IP:$NFS_SHARE_PATH $LOCAL_MOUNT_POINT nfs noauto,x-systemd.automount,x-systemd.idle-timeout=1min,soft,retrans=3,timeo=14,_netdev 0 0" | sudo tee -a /etc/fstab
+    
+    # Reload systemd and start the automount service
+    sudo systemctl daemon-reload
+    sudo systemctl restart local-fs.target
+else
+    echo "NFS mount already exists in /etc/fstab. Skipping."
+fi
+
+# 4. Grant hardware permissions (NPU, Serial, Video)
 echo "Granting user permissions for NPU, Serial, and Video..."
 # Ensure dialout and video groups exist and user is added
 sudo usermod -aG dialout "$USER"
@@ -28,7 +58,8 @@ if [ -e /dev/rknn ]; then
     sudo chmod 0666 /dev/rknn
 fi
 
-# 4. Install Docker
+# 5. Install Docker
+echo "Installing Docker..."
 for pkg in docker.io docker-doc docker-compose docker-compose-v2 podman-docker containerd runc; do sudo apt-get remove -y $pkg; done
 sudo apt-get install ca-certificates curl -y
 sudo install -m 0755 -d /etc/apt/keyrings
