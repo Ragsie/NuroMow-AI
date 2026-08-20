@@ -6,6 +6,9 @@ RUN apt-get update && apt-get install -y \
     libglib2.0-0 \
     && rm -rf /var/lib/apt/lists/*
 
+# debugging
+RUN python3 --version && uname -m
+
 # Install OpenCV and dependencies
 RUN apt-get update && apt-get install -y python3-numpy python3-opencv python3-pip
 
