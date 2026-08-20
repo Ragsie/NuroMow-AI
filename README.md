@@ -18,7 +18,7 @@ An advanced, fully autonomous lawn mower built on a Worx Landroid chassis. This 
 
 ### 🌟 Features
 * **ROS 2 Nav2:** Dynamic path planning and obstacle avoidance.
-* **YOLO26 AI Vision:** Real-time object detection (detects humans, pets, and custom trained objects like toys and animal waste) to trigger immediate emergency stops.
+* **YOLO26 AI Vision:** Real-time object detection (automatic lawn setup, detects humans, pets, and custom trained objects like toys and animal waste) to trigger immediate emergency stops.
 * **VESC Motor Control:** Smooth and powerful control of the drive wheels via CAN-bus.
 * **Micro-ROS:** Seamless communication between the main computer and the ESP32 drive controllers.
 * **100% Dockerized:** The entire brain (ROS 2, AI, Sensor nodes) runs in isolated Docker containers for extreme reliability and instant booting.
