@@ -51,4 +51,3 @@ fi
 
 echo "Rebooting the system to apply changes..."
 sudo reboot
-```
