@@ -28,3 +28,9 @@ WORKDIR /app
 COPY . /app/
 
 CMD ["python3", "stereo_node.py"]
+
+# Make the startup script executable
+RUN chmod +x /app/start_vision.sh
+
+# Run the startup script instead of launching python directly
+CMD ["/app/start_vision.sh"]
