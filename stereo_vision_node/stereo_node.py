@@ -5,7 +5,8 @@ import cv2
 import numpy as np
 import os
 
-# --- 1. SIKKER IMPORT (Undgå crash på PC) ---
+# --- 1. SAFE IMPORT (Prevent crash on PC) ---
+# Safe import: Check if we are running on the Orange Pi (NPU) or a standard PC (x86)
 try:
     from rknnlite.api import RKNNLite
     NPU_AVAILABLE = True
@@ -18,7 +19,7 @@ class StereoVisionNode(Node):
         super().__init__('stereo_vision_node')
         self.publisher_ = self.create_publisher(Bool, 'e_stop', 10)
         
-        # --- 2. BETINGET NPU OPSTART ---
+        # --- 2. CONDITIONAL NPU INITIALIZATION ---
         if NPU_AVAILABLE:
             self.get_logger().info('Loading RKNN YOLO model onto NPU...')
             self.rknn = RKNNLite()
@@ -80,7 +81,7 @@ class StereoVisionNode(Node):
 
         danger_detected = False
 
-        # --- DEPTH CHECK (Kører altid - både på NPU og PC) ---
+        # --- DEPTH CHECK (Always runs - both on NPU and PC) ---
         gray_left = cv2.cvtColor(left_img, cv2.COLOR_BGR2GRAY)
         gray_right = cv2.cvtColor(right_img, cv2.COLOR_BGR2GRAY)
         disparity = self.stereo.compute(gray_left, gray_right)
@@ -95,14 +96,14 @@ class StereoVisionNode(Node):
                 self.get_logger().warn(f'E-STOP: Object too close! Distance: {depth_meters:.2f}m')
                 danger_detected = True
 
-        # --- 3. BETINGET NPU YOLO CHECK (Springes over på PC) ---
+        # --- 3. CONDITIONAL NPU YOLO CHECK (Skipped on PC) ---
         if not danger_detected and NPU_AVAILABLE:
             img_resized = cv2.resize(left_img, (640, 640))
             img_rgb = cv2.cvtColor(img_resized, cv2.COLOR_BGR2RGB)
             
             outputs = self.rknn.inference(inputs=[img_rgb])
             
-            # Placeholder: Her mangler vi stadig din NMS-funktion til at læse 'outputs'
+            # Placeholder: We still need your NMS function here to parse 'outputs'
             detected_classes = [] 
             
             for class_id in detected_classes:
@@ -123,7 +124,7 @@ def main(args=None):
     except KeyboardInterrupt:
         pass
     finally:
-        # --- 4. SIKKER NEDLUKNING ---
+        # --- 4. SAFE SHUTDOWN ---
         if NPU_AVAILABLE:
             node.rknn.release()
         node.cap.release()
