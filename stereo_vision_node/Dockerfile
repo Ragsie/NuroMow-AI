@@ -9,11 +9,14 @@ RUN apt-get update && apt-get install -y \
     libglib2.0-0 \
     && rm -rf /var/lib/apt/lists/*
 
-# Debugging (Displays the Python version and architecture in the GitHub Actions log)
+# Debugging (Displays the Python version and architecture in the GitHub Actions log. It MUST say aarch64)
 RUN python3 --version && uname -m
 
-# Install Rockchip NPU runtime lite (v2.3.2 for Python 3.10)
-RUN pip3 install --no-cache-dir https://github.com/airockchip/rknn-toolkit2/raw/master/rknn-toolkit-lite2/packages/rknn_toolkit_lite2-2.3.2-cp310-cp310-manylinux_2_17_aarch64.manylinux2014_aarch64.whl
+# Upgrade pip to the latest version (crucial for supporting modern 'manylinux' wheel formats)
+RUN pip3 install --upgrade pip
+
+# Install Rockchip NPU runtime lite directly via PyPI
+RUN pip3 install --no-cache-dir rknn-toolkit-lite2==2.3.2
 
 WORKDIR /app
 COPY . /app/
