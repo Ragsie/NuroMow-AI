@@ -33,6 +33,10 @@ services:
     network_mode: "host"
     privileged: true # Required for direct NPU (/dev/rknn) access on Orange Pi
     volumes:
+      - /dev:/dev  # Gives access to camera and /dev/rknn
+      # Mount your TrueNAS NFS share (you have to mount it on your Orange Pi host first)
+      # Format: /path/on/orange-pi : /path/to/the/container : read-only 
+      - /mnt/nfs/deploy:/mnt/truenas_deploy:ro
       - /dev:/dev # Mounts all devices, ensuring /dev/rknn and /dev/video* are available
     environment:
       # --- CAMERA CONFIGURATION ---
