@@ -39,6 +39,7 @@ class StereoVisionNode(Node):
             self.get_logger().warn('NPU DISABLED: Stereo depth active, YOLO offline.')
 
         # Setup Camera Configuration
+        cam_index = int(os.getenv('CAMERA_INDEX', '0'))
         cam_width = int(os.getenv('CAMERA_WIDTH', '2560'))
         cam_height = int(os.getenv('CAMERA_HEIGHT', '720'))
         cam_fps = int(os.getenv('CAMERA_FPS', '10'))
@@ -52,7 +53,7 @@ class StereoVisionNode(Node):
 
         self.get_logger().info(f'Configuring camera to {cam_width}x{cam_height} at {cam_fps} FPS')
         
-        self.cap = cv2.VideoCapture(0)
+        self.cap = cv2.VideoCapture(cam_index)
         self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, cam_width) 
         self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, cam_height)
         self.cap.set(cv2.CAP_PROP_FPS, cam_fps)
