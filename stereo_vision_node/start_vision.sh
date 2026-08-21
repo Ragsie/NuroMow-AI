@@ -27,3 +27,5 @@ fi
 # 3. Start the actual ROS 2 Node
 echo "Starting Stereo Vision ROS 2 Node..."
 exec python3 stereo_node.py
+echo "Starting ROS 2 Launch sequence..."
+exec ros2 launch /app/launch/mower.launch.py
