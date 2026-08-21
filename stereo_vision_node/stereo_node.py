@@ -7,6 +7,7 @@ import numpy as np
 import os
 from nav_msgs.msg import OccupancyGrid
 from std_msgs.msg import Header
+from sensor_msgs.msg import CompressedImage
 
 # --- 1. SAFE IMPORT (Prevent crash on x86 PC) ---
 try:
@@ -23,6 +24,8 @@ class StereoVisionNode(Node):
         # Publishers
         self.publisher_ = self.create_publisher(Bool, 'e_stop', 10)
         self.scan_publisher_ = self.create_publisher(LaserScan, 'scan', 10)
+
+        self.image_pub = self.create_publisher(CompressedImage, 'camera/image/compressed', 10)
         
         # --- 2. CONDITIONAL NPU INITIALIZATION ---
         if NPU_AVAILABLE:
@@ -83,7 +86,15 @@ class StereoVisionNode(Node):
         if not ret:
             self.get_logger().warning('Lost connection to the stereo camera!')
             return
-
+            
+        # Compresses frame to JPEG, to prevent laggeing video feed over network
+        _, encoded_img = cv2.imencode('.jpg', left_img, [int(cv2.IMWRITE_JPEG_QUALITY), 60])
+        compressed_msg = CompressedImage()
+        compressed_msg.header.stamp = self.get_clock().now().to_msg()
+        compressed_msg.format = "jpeg"
+        compressed_msg.data = np.array(encoded_img).tobytes()
+        self.image_pub.publish(compressed_msg)
+        
         h, w, _ = frame.shape
         half_w = w // 2
         left_img = frame[:, :half_w]
