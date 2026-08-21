@@ -1,6 +1,7 @@
 import rclpy
 from rclpy.node import Node
 from std_msgs.msg import Bool
+from sensor_msgs.msg import LaserScan
 import cv2
 import numpy as np
 import os
