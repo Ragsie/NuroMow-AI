@@ -42,6 +42,10 @@ const uint8_t VESC_ID_LEFT = 2;
 const uint32_t VESC_CAN_PACKET_SET_RPM = 3;
 const int POLE_PAIRS = 15; // Motor pole pairs (update if needed via VESC Tool)
 
+// data transmit
+rcl_publisher_t status_publisher;
+std_msgs__msg__String status_msg;
+
 // --- HELPER FUNCTION: Send RPM to VESC ---
 void send_vesc_rpm(uint8_t controller_id, float target_rpm) {
   twai_message_t message;
@@ -179,6 +183,13 @@ void setup() {
   rclc_executor_add_subscription(&executor, &cmd_vel_subscriber, &twist_msg, &cmd_vel_callback, ON_NEW_DATA);
   rclc_executor_add_subscription(&executor, &e_stop_subscriber, &e_stop_msg, &e_stop_callback, ON_NEW_DATA);
   rclc_executor_add_subscription(&executor, &config_subscriber, &config_msg, &config_callback, ON_NEW_DATA);
+  
+  rclc_publisher_init_default(
+  &status_publisher,
+  &node,
+  ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, String),
+  "/mower/status"
+);
 }
 
 void loop() {
@@ -188,4 +199,9 @@ void loop() {
   if (bumper_e_stop_active && digitalRead(SHIELD_SENSOR_PIN) == HIGH) {
     bumper_e_stop_active = false;
   }
+  
+  // Send f.eks. "MOWING,Bat:85%"
+  status_msg.data.data = "MOWING";
+  status_msg.data.size = strlen(status_msg.data.data);
+  rcl_publish(&status_publisher, &status_msg, NULL);
 }
