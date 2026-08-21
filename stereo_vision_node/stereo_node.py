@@ -5,6 +5,8 @@ from sensor_msgs.msg import LaserScan  # Required for Virtual LiDAR
 import cv2
 import numpy as np
 import os
+from nav_msgs.msg import OccupancyGrid
+from std_msgs.msg import Header
 
 # --- 1. SAFE IMPORT (Prevent crash on x86 PC) ---
 try:
