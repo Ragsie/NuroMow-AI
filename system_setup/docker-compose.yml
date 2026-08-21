@@ -1,13 +1,24 @@
 services:
-  # 1. MICRO-ROS AGENT
-  microros_agent:
+# 1. MICRO-ROS AGENT (Drivemotorer - VESC)
+  microros_agent_drive:
     image: microros/micro-ros-agent:humble
-    container_name: microros_agent
-    network_mode: "host" 
-    privileged: true 
+    container_name: microros_agent_drive
+    network_mode: "host"
+    privileged: true
     volumes:
       - /dev:/dev
     command: serial --dev /dev/ttyUSB0 -v6
+    restart: unless-stopped
+
+  # 2. MICRO-ROS AGENT (Cuttermotor-VESC)
+  microros_agent_cutter:
+    image: microros/micro-ros-agent:humble
+    container_name: microros_agent_cutter
+    network_mode: "host"
+    privileged: true
+    volumes:
+      - /dev:/dev
+    command: serial --dev /dev/ttyUSB1 -v6
     restart: unless-stopped
 
   # 4. ROSBRIDGE WEB SOCKET (For Foxglove / Web UI)
