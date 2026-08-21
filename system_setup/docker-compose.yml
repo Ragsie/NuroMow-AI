@@ -35,7 +35,9 @@ services:
     image: ros:humble-ros-base
     container_name: ros2_nav
     network_mode: "host"
-    command: tail -f /dev/null 
+    command: >
+      bash -c "apt-get update && apt-get install -y ros-humble-slam-toolbox && 
+               ros2 run slam_toolbox async_slam_toolbox_node"
     restart: unless-stopped
 
   stereo_vision:
