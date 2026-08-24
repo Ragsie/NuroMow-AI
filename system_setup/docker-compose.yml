@@ -65,3 +65,11 @@ services:
       # MIN_SAFE_DISTANCE: The distance in meters that triggers the E-STOP
       - MIN_SAFE_DISTANCE=1.0
     restart: unless-stopped
+
+  app_backend:
+    image: ragsie/worx-app-backend:latest
+    container_name: app_backend
+    network_mode: "host"
+    restart: unless-stopped
+    depends_on:
+      - rosbridge

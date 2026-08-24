@@ -10,6 +10,7 @@ from std_msgs.msg import Header
 from sensor_msgs.msg import CompressedImage
 
 # --- 1. SAFE IMPORT (Prevent crash on x86 PC) ---
+# NOTE: This project is designed for RKNN-capable hardware, but the node should still run in a reduced test mode on a non-NPU machine.
 try:
     from rknnlite.api import RKNNLite
     NPU_AVAILABLE = True
@@ -28,6 +29,7 @@ class StereoVisionNode(Node):
         self.image_pub = self.create_publisher(CompressedImage, 'camera/image/compressed', 10)
         
         # --- 2. CONDITIONAL NPU INITIALIZATION ---
+        # TODO: Validate the model file path and ensure the NPU runtime is present on the target board before deployment.
         if NPU_AVAILABLE:
             self.get_logger().info('Loading RKNN YOLO model onto NPU...')
             self.rknn = RKNNLite()
@@ -54,6 +56,7 @@ class StereoVisionNode(Node):
         self.min_safe_distance = float(os.getenv('MIN_SAFE_DISTANCE', '1.0'))
         
         # Camera Horizontal Field of View in radians (Approx 60 degrees)
+        # NOTE: Camera calibration matters here; bad FOV or baseline values directly affect depth and collision distance estimates.
         self.camera_fov = 1.047 
 
         self.get_logger().info(f'Configuring camera to {cam_width}x{cam_height} at {cam_fps} FPS')
@@ -87,7 +90,8 @@ class StereoVisionNode(Node):
             self.get_logger().warning('Lost connection to the stereo camera!')
             return
             
-        # Compresses frame to JPEG, to prevent laggeing video feed over network
+        # Compresses frame to JPEG to reduce network lag and keep the video stream usable.
+        # NOTE: This uses left_img before it is defined below; fix the order if the feed starts dropping frames or images are blank.
         _, encoded_img = cv2.imencode('.jpg', left_img, [int(cv2.IMWRITE_JPEG_QUALITY), 60])
         compressed_msg = CompressedImage()
         compressed_msg.header.stamp = self.get_clock().now().to_msg()
@@ -99,6 +103,9 @@ class StereoVisionNode(Node):
         half_w = w // 2
         left_img = frame[:, :half_w]
         right_img = frame[:, half_w:]
+
+        # NOTE: The image compression block above uses left_img before it is assigned here.
+        # This is a bug risk and should be moved after the left/right split so the published frame is always defined.
 
         danger_detected = False
 
@@ -151,6 +158,7 @@ class StereoVisionNode(Node):
             danger_detected = True
 
         # --- 3. CONDITIONAL NPU YOLO CHECK ---
+        # TODO: Tune the confidence threshold and class mapping against your actual training data to reduce false positives/negatives.
         if not danger_detected and NPU_AVAILABLE:
             img_resized = cv2.resize(left_img, (640, 640))
             img_rgb = cv2.cvtColor(img_resized, cv2.COLOR_BGR2RGB)

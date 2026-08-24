@@ -23,6 +23,9 @@ rcl_node_t node;
 bool blade_is_running = false;
 const float MAX_ALLOWED_AMPS = 15.0; // Safety threshold for the cutting motor
 
+// NOTE: The blade controller is currently only toggling an LED and does not yet send an actual RPM command to the VESC.
+// This is a critical missing step before the mower can physically spin the blade.
+
 // --- ROS 2 CALLBACK (Triggered when Pi sends Blade On/Off command) ---
 void blade_control_callback(const void * msgin) {
   const std_msgs__msg__Bool * in_msg = (const std_msgs__msg__Bool *)msgin;
@@ -55,6 +58,7 @@ void setup() {
   }
 
   // Setup Micro-ROS over Serial transport
+  // TODO: Add a startup handshake or watchdog to confirm the Raspberry Pi is alive before enabling blade power.
   set_microros_transports();
   delay(2000); // Give the connection time to stabilize
   
@@ -80,7 +84,8 @@ void loop() {
 
   // --- SAFETY OVERLOAD MONITORING ---
   if (blade_is_running) {
-    // TODO: Request status frame (telemetry) from Single VESC via CAN bus
+    // TODO: Request status frame (telemetry) from the single VESC via CAN bus.
+    // TODO: Implement a real current or RPM check and stop the blade if the motor stalls or jams.
     // float current_amps = get_vesc_current();
     // 
     // if (current_amps > MAX_ALLOWED_AMPS) {

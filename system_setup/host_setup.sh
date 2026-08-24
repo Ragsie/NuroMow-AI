@@ -10,10 +10,14 @@ fi
 # ==========================================
 # USER CONFIGURATION (EDIT THESE FOR TRUENAS)
 # ==========================================
+# NOTE: Set these before running the script on a real machine.
+# If the IP or NFS path is wrong, the host setup will fail or the AI model will never mount.
 TRUENAS_IP="192.168.X.X" # Insert your jupyterlab IP here
 NFS_SHARE_PATH="/mnt/pool_name/deploy" # Insert the full path to your NFS share
 LOCAL_MOUNT_POINT="/mnt/nfs/deploy" 
 # ==========================================
+
+# TODO: Verify that the target host is an ARM64 system, since the Docker image and RKNN drivers are architecture-specific.
 
 echo "Preparing Orange Pi 5 host machine for Docker-based Worx Mower..."
 
@@ -59,6 +63,8 @@ if [ -e /dev/rknn ]; then
 fi
 
 # 5. Install Docker
+# NOTE: This script assumes Ubuntu/Debian package management and Docker repository access.
+# If the machine is not Debian-based, the install commands will need to be adapted.
 echo "Installing Docker..."
 for pkg in docker.io docker-doc docker-compose docker-compose-v2 podman-docker containerd runc; do sudo apt-get remove -y $pkg; done
 sudo apt-get install ca-certificates curl -y
@@ -73,6 +79,7 @@ sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin 
 sudo usermod -aG docker "$USER"
 
 echo "Pulling latest Docker containers..."
+# TODO: Check that the compose file matches the host architecture and that all required containers are present.
 if [ -f "docker-compose.yml" ]; then
     docker compose pull
     sudo DOCKER_DEFAULT_PLATFORM=linux/arm64 docker compose up -d

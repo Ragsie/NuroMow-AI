@@ -2,6 +2,8 @@
 # --- STARTUP SCRIPT FOR STEREO VISION NODE ---
 
 # Define paths
+# NOTE: Verify the TrueNAS mount path and the model filename before deployment.
+# If the path is wrong, the script will silently fall back to the local model and the AI vision may be disabled.
 NFS_DEPLOY_MODEL="/mnt/truenas_deploy/yolo26n-seg.rknn"
 LOCAL_MODEL="/app/yolo26n-seg.rknn"
 

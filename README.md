@@ -7,11 +7,13 @@
 > *Damage to your equipment may occur. Use at your own risk.*
 
 ## 💡 Why This Project?
-Taking my old Landroid mower and making it SMART.
+Taking my old Landroid mower and making it smart.
 
 This project started out of frustration: my current Worx M600 Plus has a bad habit of digging holes in my lawn instead of cutting the grass. Rather than just buying a new mower, I decided to build my own and learn a new tech stack along the way. While there are plenty of open-source DIY mowers available, my goal is to build this from the ground up to deeply understand the mechanics and software behind it. I want to learn by doing, not just by copying and pasting an existing setup.
 
-I'll document the whole journey here. If you have a mower tearing up your lawn too, I hope this can serve as some inspiration for your own build.
+I will document the whole journey here. If you have a mower tearing up your lawn too, I hope this can serve as some inspiration for your own build.
+
+# NOTE: This is an active research project and hardware platform. Treat the hardware, safety systems, and software as evolving work in progress.
 
 ## 🤖 About The Project
 An advanced, fully autonomous lawn mower built on a Worx Landroid chassis. This project upgrades the original hardware with a modern ROS 2 (Humble/Jazzy) stack, VESC motor controllers, and real-time AI vision using depth calculation and YOLO26n for ultimate safety.

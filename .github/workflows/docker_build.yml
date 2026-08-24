@@ -51,3 +51,12 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: true
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/worx-rosbridge:latest
+
+      # 6. Build and push the App Backend Node
+      - name: Build and push App Backend Node
+        uses: docker/build-push-action@v5
+        with:
+          context: ./app_backend
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/worx-app-backend:latest
