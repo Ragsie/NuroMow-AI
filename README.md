@@ -40,6 +40,11 @@ In the Wiki you will find:
 
 ---
 
+## 📱 ROS 2 App
+Control the mower with the [ROS 2 mobile app](https://github.com/Ragsie/ros_mower_app).
+
+---
+
 ## ☕ Support The Project
 If this project helped you or inspired your own build, consider buying me a cup of coffee. It would make my day and support me in developing more!
 
