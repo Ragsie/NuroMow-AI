@@ -5,6 +5,7 @@
 #include <rclc/executor.h>
 #include <std_msgs/msg/bool.h> 
 #include "driver/twai.h"
+#include <std_msgs/msg/float32.h> // Required to send Ampere data
 
 // --- PIN DEFINITIONS ---
 // ESP32 built-in CAN-bus (TWAI) driver
@@ -26,6 +27,10 @@ rclc_executor_t executor;
 rclc_support_t support;
 rcl_allocator_t allocator;
 rcl_node_t node;
+
+// --- MICRO-ROS PUBLISHERS ---
+rcl_publisher_t amps_publisher;
+std_msgs__msg__Float32 amps_msg;
 
 // --- MOWER STATE & SAFETY ---
 bool blade_is_running = false;
@@ -117,6 +122,14 @@ void setup() {
         "/mower/blade_enabled"
     );
 
+    // Publisher for Cutter Motor Amps
+    rclc_publisher_init_default(
+        &amps_publisher,
+        &node,
+        ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32),
+        "/hw/cutter_amps"
+    );
+
     rclc_executor_init(&executor, &support.context, 1, &allocator);
     rclc_executor_add_subscription(&executor, &subscriber, &msg, &blade_control_callback, ON_NEW_DATA);
 }
@@ -152,4 +165,7 @@ void loop() {
             }
         }
     }
+    // 3. Publish live current (Amps) to ROS 2 backend
+    amps_msg.data = current_motor_amps;
+    rcl_publish(&amps_publisher, &amps_msg, NULL);
 }
