@@ -1,6 +1,10 @@
 <?xml version="1.0"?>
 <robot name="worx_mower">
 
+  <!-- ========================================== -->
+  <!-- BASE OF THE ROBOT                          -->
+  <!-- ========================================== -->
+  
   <!-- Base Link: The mathematical center of the robot (usually center of the drive wheels) -->
   <link name="base_link">
   </link>
@@ -16,6 +20,10 @@
     <origin xyz="0 0 0.05" rpy="0 0 0"/>
   </joint>
 
+  <!-- ========================================== -->
+  <!-- STEREO CAMERA MOUNT                        -->
+  <!-- ========================================== -->
+  
   <!-- Camera Link: Where the stereo camera is mounted -->
   <link name="camera_link">
   </link>
@@ -28,8 +36,7 @@
          X = Distance forward from wheel center
          Y = Distance left/right from center (0 if perfectly centered)
          Z = Height above wheel center
-         Example below: Mounted 20cm forward, perfectly centered, 15cm high.
-    -->
+         Example below: Mounted 20cm forward, perfectly centered, 15cm high. -->
     <origin xyz="0.20 0.0 0.15" rpy="0 0 0"/>
   </joint>
 
