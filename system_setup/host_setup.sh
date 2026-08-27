@@ -1,6 +1,6 @@
 #!/bin/bash
 # Complete Docker Host Provisioning Script for "OpenMow AI" / "Worx ROS 2 Mower"
-# Target OS: Ubuntu (Joshua Riek / Orange Pi OS / Raspberry Pi OS)
+# Target OS: Ubuntu (Orange Pi OS / Ubuntu Server)
 
 if [ "$EUID" -ne 0 ]; then
   echo "❌ Error: This script must be run with sudo!"
@@ -13,11 +13,10 @@ echo "======================================================"
 echo ""
 echo "Select deployment profile:"
 echo "  1) Cloud Mode (Pure OTA via GitHub & Watchtower - No Local Server)"
-echo "  2) Local Mode (Mounts Local Server for Dataset Collection / Active Learning)"
+echo "  2) Local Mode (Mounts Local Server for Dataset Collection & Custom Upload Path)"
 echo ""
 read -rp "Enter choice [1 or 2]: " DEPLOY_MODE
 
-# Validate Input
 if [[ "$DEPLOY_MODE" != "1" && "$DEPLOY_MODE" != "2" ]]; then
     echo "❌ Invalid selection. Aborting."
     exit 1
@@ -44,41 +43,56 @@ if [ -e /dev/rknn ]; then
   chmod 0666 /dev/rknn
 fi
 
-# 4. Mode-specific configuration (Local Server & Dataset Pipeline)
+# 4. Mode-specific configuration
 if [ "$DEPLOY_MODE" == "2" ]; then
-    echo "📁 Configuring Local Storage & Training Pipelines..."
+    echo ""
+    echo "📁 --- Local Server Storage Setup ---"
     apt-get install nfs-common -y
     
-    read -rp "Enter Local Server IP (e.g., 192.168.1.100): " SERVER_IP
-    read -rp "Enter Server NFS Export Path (e.g., /mnt/pool/openmow): " SERVER_PATH
+    # Prompt for Server IP
+    read -rp "Enter Local Server IP (e.g. 192.168.1.100): " SERVER_IP
+    
+    # Prompt for Root NFS Share Path
+    read -rp "Enter Server NFS Export Path [default: /mnt/Meta-pool/yolo_training]: " SERVER_PATH
+    SERVER_PATH="${SERVER_PATH:-/mnt/Meta-pool/yolo_training}"
+    
+    # Prompt for specific raw image directory
+    read -rp "Enter upload subfolder name [default: incoming_raw]: " RAW_SUBFOLDER
+    RAW_SUBFOLDER="${RAW_SUBFOLDER:-incoming_raw}"
 
-    mkdir -p /mnt/local_ai_server
+    LOCAL_MOUNT_POINT="/mnt/local_ai_server"
+    mkdir -p "$LOCAL_MOUNT_POINT"
     
     # Mount NFS share
     echo "🔗 Connecting to ${SERVER_IP}:${SERVER_PATH}..."
-    mount -t nfs "${SERVER_IP}:${SERVER_PATH}" /mnt/local_ai_server 2>/dev/null || echo "⚠️ Warning: Could not mount NFS immediately. Ensure server is online."
+    mount -t nfs "${SERVER_IP}:${SERVER_PATH}" "$LOCAL_MOUNT_POINT" 2>/dev/null || echo "⚠️ Warning: Could not mount NFS immediately. Ensure server is online."
 
-    # Add to /etc/fstab for persistence
-    FSTAB_ENTRY="${SERVER_IP}:${SERVER_PATH} /mnt/local_ai_server nfs defaults,_netdev,nofail 0 0"
-    if ! grep -q "/mnt/local_ai_server" /etc/fstab; then
+    # Persistent fstab entry
+    FSTAB_ENTRY="${SERVER_IP}:${SERVER_PATH} ${LOCAL_MOUNT_POINT} nfs defaults,_netdev,nofail 0 0"
+    if ! grep -q "$LOCAL_MOUNT_POINT" /etc/fstab; then
         echo "$FSTAB_ENTRY" >> /etc/fstab
     fi
 
-    # Create local drop folders on target server for the Grounded-SAM pipeline
-    mkdir -p /mnt/local_ai_server/incoming_raw
-    mkdir -p /mnt/local_ai_server/models
+    # Create target directories on the mounted share
+    mkdir -p "${LOCAL_MOUNT_POINT}/${RAW_SUBFOLDER}"
+    mkdir -p "${LOCAL_MOUNT_POINT}/models"
 
-    # Create an environment flag for docker-compose / ROS 2
+    # Save to environment file for docker-compose
     echo "AI_MODE=local" > .env
     echo "UPLOAD_RAW_FRAMES=true" >> .env
-    echo "LOCAL_STORAGE_PATH=/mnt/local_ai_server" >> .env
-    echo "✅ Local Mode configured. Dataset buffer mapped to /mnt/local_ai_server/incoming_raw"
+    echo "LOCAL_STORAGE_PATH=${LOCAL_MOUNT_POINT}" >> .env
+    echo "RAW_UPLOAD_FOLDER=${RAW_SUBFOLDER}" >> .env
+
+    echo "✅ Local Mode configured."
+    echo "   Mounted: ${SERVER_IP}:${SERVER_PATH} -> ${LOCAL_MOUNT_POINT}"
+    echo "   Target Upload Path: ${LOCAL_MOUNT_POINT}/${RAW_SUBFOLDER}"
 else
     echo "☁️ Configuring Cloud Mode..."
     echo "AI_MODE=cloud" > .env
     echo "UPLOAD_RAW_FRAMES=false" >> .env
     echo "LOCAL_STORAGE_PATH=/dev/null" >> .env
-    echo "✅ Cloud Mode configured. Watchtower and container models active."
+    echo "RAW_UPLOAD_FOLDER=none" >> .env
+    echo "✅ Cloud Mode configured. Watchtower OTA active."
 fi
 
 # 5. Install Docker & Compose Plugin
