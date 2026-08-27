@@ -11,7 +11,7 @@ Taking my old Landroid mower, and making it SMART with OpenMow AI.
 
 ### The Companion App 📱
 Control and monitor the mower in real-time with the official Flutter companion app! 
-👉 **[Get the OpenMow AI App here](https://github.com/Ragsie/OpenMow-AI_app)**
+👉 **[Get the OpenMow AI App here](https://github.com/Ragsie/OpenMow-AI_app)** [![Build and Release OpenMow AI](https://github.com/Ragsie/OpenMow-AI_app/actions/workflows/build.yml/badge.svg)](https://github.com/Ragsie/OpenMow-AI_app/actions/workflows/build.yml)
 
 ### Why
 This project started out of frustration: my current Worx M600 Plus has a bad habit of digging holes in my lawn instead of cutting the grass. Rather than just buying a new mower, I decided to build my own and learn a new tech stack along the way. While there are plenty of open-source DIY mowers available, my goal is to build this from the ground up to deeply understand the mechanics and software behind it. I want to learn by doing, not just by copying and pasting an existing setup.
