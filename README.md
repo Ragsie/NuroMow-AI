@@ -27,6 +27,7 @@ An advanced, fully autonomous lawn mower built on a Worx Landroid chassis. This 
 *   **VESC Motor Control:** Smooth and powerful control of the drive wheels via CAN-bus.
 *   **Micro-ROS:** Seamless communication between the main computer and the ESP32 drive controllers.
 *   **100% Dockerized:** The entire brain (ROS 2, AI, Sensor nodes) runs in isolated Docker containers for extreme reliability and instant booting.
+*   **regular AI model update with auto download and setup 
 
 ---
 
