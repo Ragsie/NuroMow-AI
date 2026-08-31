@@ -66,3 +66,17 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
     command: --interval 300 --cleanup
     restart: unless-stopped
+
+  # 7. openmown-seg & PointCloud 3D Fusion Node
+  depth_fusion:
+    image: ragsie/openmow-depth-fusion:latest
+    container_name: depth_fusion
+    network_mode: "host"
+    privileged: true
+    volumes:
+      - /dev:/dev
+    environment:
+      - MIN_SAFE_DISTANCE=1.0
+    restart: unless-stopped
+    depends_on:
+      - stereo_vision

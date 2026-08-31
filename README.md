@@ -23,11 +23,12 @@ An advanced, fully autonomous lawn mower built on a Worx Landroid chassis. This 
 
 #### 🌟 Features
 *   **ROS 2 Nav2:** Dynamic path planning and obstacle avoidance.
-*   **YOLO AI Vision:** Real-time object detection (detects humans, pets, and custom trained objects like toys and animal waste) to trigger immediate emergency stops.
+*   **AI Vision:** Real-time object detection (detects humans, pets, and custom trained objects like toys and animal waste) to trigger immediate emergency stops.
+*   **Depth Vision:** A stereo camera providing visual navigation data to the mower, working in tandem with AI Vision.
 *   **VESC Motor Control:** Smooth and powerful control of the drive wheels via CAN-bus.
 *   **Micro-ROS:** Seamless communication between the main computer and the ESP32 drive controllers.
 *   **100% Dockerized:** The entire brain (ROS 2, AI, Sensor nodes) runs in isolated Docker containers for extreme reliability and instant booting.
-*   **AI Updates:** regular AI model update with auto download and setup (option see [wiki](https://github.com/Ragsie/OpenMow-AI/wiki))
+*   **AI Updates:** Regular AI model updates with automatic download and setup (see [wiki](https://github.com/Ragsie/OpenMow-AI/wiki)). The MowerAI is a YOLO26n-seg model, retrained on my own dataset and converted for deployment.
 
 ---
 

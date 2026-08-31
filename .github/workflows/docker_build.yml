@@ -40,7 +40,7 @@ jobs:
           # THE MAGIC: Builds for BOTH your PC (amd64) and your robot (arm64)
           platforms: linux/amd64,linux/arm64
           push: true # <--- This automatically uploads the image to Docker Hub
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/worx-stereo-vision:latest
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/stereo-vision:latest
 
       # 5. Build and push the Rosbridge WebSocket Node
       - name: Build and push Rosbridge
@@ -50,7 +50,7 @@ jobs:
           file: ./rosbridge_websocket/Dockerfile
           platforms: linux/amd64,linux/arm64
           push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/worx-rosbridge:latest
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/rosbridge:latest
 
       # 6. Build and push the App Backend Node
       - name: Build and push App Backend Node
@@ -59,4 +59,14 @@ jobs:
           context: ./app_backend
           platforms: linux/amd64,linux/arm64
           push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/worx-app-backend:latest
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/app-backend:latest
+
+      # 7. Build and push the openmown-seg.rknn depth node
+      - name: Build and push Depth Fusion Node
+        uses: docker/build-push-action@v5
+        with:
+          context: ./depth_fusion
+          file: ./depth_fusion/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/depth-fusion:latest
