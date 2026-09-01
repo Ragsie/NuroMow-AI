@@ -1,5 +1,5 @@
 #!/bin/bash
-# Complete Docker Host Provisioning Script for "AuraMow AI" / "Worx ROS 2 Mower"
+# Complete Docker Host Provisioning Script for "NexaMow AI" / "Worx ROS 2 Mower"
 # Target OS: Ubuntu (Orange Pi OS / Ubuntu Server)
 
 if [ "$EUID" -ne 0 ]; then
@@ -8,7 +8,7 @@ if [ "$EUID" -ne 0 ]; then
 fi
 
 echo "======================================================"
-echo "🚀 AuraMow AI - Host Provisioning & Deployment Setup"
+echo "🚀 NexaMow AI - Host Provisioning & Deployment Setup"
 echo "======================================================"
 echo ""
 echo "Select deployment profile:"
