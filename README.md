@@ -47,8 +47,7 @@ In the Wiki you will find:
 
 ## ☕ Support The Project
 If this project helped you or inspired your own build, consider buying me a cup of coffee. It would make my day and support me in developing more!
-
-If you like this project and want to support its development, donations are welcome! However, please note that this project is, and will always remain, **100% free and open-source** under the **GNU GPLv3 License** in accordance with the licenses of our upstream dependencies.
+please note that this project is, and will always remain, **100% free and open-source** under the **GNU GPLv3 License** in accordance with the licenses of our upstream dependencies.
 
 | Coin | QR | Address |
 | :-- | :--- | :---: |
