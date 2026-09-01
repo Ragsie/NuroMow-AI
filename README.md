@@ -38,6 +38,31 @@ In the Wiki you will find:
 
 ---
 
+# License, Credits & Inspiration 🛠️
+
+This project is built upon the fantastic work of the open-source community, but with a completely unique hardware philosophy.
+
+### 🔌 Hardware Philosophy: 100% Off-The-Shelf (DIY)
+While the original OpenMow project by Clemens Elflein is primarily designed to run on his custom, proprietary replacement motherboards, **this AI project is built 100% on standardized, off-the-shelf (OTS) components**. 
+
+the plan is to strip all the original electronics from a Worx lawnmower chassis and rebuilt it completely from scratch using:
+*   **Orange Pi 5 Ultra** (Main computer with hardware NPU acceleration)
+*   **ESP32** & **Autoro VESC 6.7 ESCs** (Drive and cutter motor control) 
+*   **Quectel LC29H** (Budget-friendly, millimeter-precise RTK-GNSS) 
+*   **GXIVISION 3D Stereo USB Camera** (Real-time AI vision and e-stop) 
+
+This makes our hardware platform extremely inexpensive, highly accessible, and completely independent of proprietary hardware manufacturers!
+
+### 🤝 Acknowledgement of Software & Concepts
+Although the hardware architecture is OFF the shelf components, I would like to send a huge thank you to the projects that have inspired us and provided the software building blocks we use under the hood:
+
+*   **[OpenMow](https://github.com/ClemensElflein/OpenMow) by Clemens Elflein:** For the pioneering concept of converting Worx chassises into RTK-guided ROS robots (licensed under GPL-3.0)
+*   **[YOLO26n-seg by Ultralytics](https://github.com/ultralytics/ultralytics):** For the lightning-fast AI segmentation system running locally on the NPU (licensed under AGPL-3.0)
+*   **[ROS 2 (Robot Operating System)](https://www.ros.org/):** The robust middleware framework driving our entire messaging and node architecture (licensed under Apache 2.0) 
+*   **[micro-ROS](https://micro.ros.org/):** For bringing ROS 2 seamlessly onto our ESP32 microcontroller (licensed under Apache 2.0) [cite: 24].
+
+---
+
 ## ☕ Support The Project
 If this project helped you or inspired your own build, consider buying me a cup of coffee. It would make my day and support me in developing more!
 
