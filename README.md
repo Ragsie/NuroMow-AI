@@ -50,7 +50,7 @@ In the Wiki you will find:
 This project is built upon the fantastic work of the open-source community, but with a completely unique hardware philosophy.
 
 ### 🔌 Hardware Philosophy: 100% Off-The-Shelf (DIY)
-While the original NuroMow project by Clemens Elflein is primarily designed to run on his custom, proprietary replacement motherboards, **this AI project is built 100% on standardized, off-the-shelf (OTS) components**. 
+While the original OpenMower project by Clemens Elflein is primarily designed to run on his custom, proprietary replacement motherboards, **this AI project is built 100% on standardized, off-the-shelf (OTS) components**. 
 
 the plan is to strip all the original electronics from a Worx lawnmower chassis and rebuilt it completely from scratch using:
 *   **Orange Pi 5 Ultra** (Main computer with hardware NPU acceleration)
