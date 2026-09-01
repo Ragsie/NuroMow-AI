@@ -48,6 +48,8 @@ In the Wiki you will find:
 ## ☕ Support The Project
 If this project helped you or inspired your own build, consider buying me a cup of coffee. It would make my day and support me in developing more!
 
+If you like this project and want to support its development, donations are welcome! However, please note that this project is, and will always remain, **100% free and open-source** under the **GNU GPLv3 License** in accordance with the licenses of our upstream dependencies.
+
 | Coin | QR | Address |
 | :-- | :--- | :---: |
 | **Bitcoin Cash** | <img width="160" height="161" alt="qrcode" src="https://github.com/user-attachments/assets/254aece9-8957-4d34-812c-885ac2e839fa" /> | `bitcoincash:qzp4c7klef8q6gxycvc84dx0fnhnfxkkpy6xda56h3` |
