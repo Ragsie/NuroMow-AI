@@ -8,6 +8,7 @@ RUN apt-get update && apt-get install -y \
     python3-pip \
     python3-numpy \
     python3-opencv \
+    ros-humble-robot-state-publisher \
     libgl1 \
     libglib2.0-0 \
     && rm -rf /var/lib/apt/lists/*
@@ -28,3 +29,9 @@ WORKDIR /app
 COPY . /app/
 
 CMD ["python3", "stereo_node.py"]
+
+# Make the startup script executable
+RUN chmod +x /app/start_vision.sh
+
+# Run the startup script instead of launching python directly
+CMD ["/app/start_vision.sh"]
