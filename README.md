@@ -59,7 +59,7 @@ Although the hardware architecture is OFF the shelf components, I would like to 
 *   **[OpenMow](https://github.com/ClemensElflein/OpenMow) by Clemens Elflein:** For the pioneering concept of converting Worx chassises into RTK-guided ROS robots (licensed under GPL-3.0)
 *   **[YOLO26n-seg by Ultralytics](https://github.com/ultralytics/ultralytics):** For the lightning-fast AI segmentation system running locally on the NPU (licensed under AGPL-3.0)
 *   **[ROS 2 (Robot Operating System)](https://www.ros.org/):** The robust middleware framework driving our entire messaging and node architecture (licensed under Apache 2.0) 
-*   **[micro-ROS](https://micro.ros.org/):** For bringing ROS 2 seamlessly onto our ESP32 microcontroller (licensed under Apache 2.0) [cite: 24].
+*   **[micro-ROS](https://micro.ros.org/):** For bringing ROS 2 seamlessly onto our ESP32 microcontroller (licensed under Apache 2.0)
 
 ---
 
