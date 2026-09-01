@@ -35,8 +35,8 @@ jobs:
       - name: Build and push Stereo Vision Node
         uses: docker/build-push-action@v5
         with:
-          context: ./stereo_vision_node
-          file: ./stereo_vision_node/Dockerfile
+          context: ./stereo_vision
+          file: ./stereo_vision/Dockerfile
           # THE MAGIC: Builds for BOTH your PC (amd64) and your robot (arm64)
           platforms: linux/amd64,linux/arm64
           push: true # <--- This automatically uploads the image to Docker Hub
