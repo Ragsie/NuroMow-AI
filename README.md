@@ -9,9 +9,9 @@
 # OpenMow AI
 Taking my old Landroid mower, and making it SMART with OpenMow AI.
 
-### The Companion App 📱
+### The Companion App 📱 [![Build and Release OpenMow AI](https://github.com/Ragsie/OpenMow-AI_app/actions/workflows/build.yml/badge.svg)](https://github.com/Ragsie/OpenMow-AI_app/actions/workflows/build.yml)
 Control and monitor the mower in real-time with the official Flutter companion app! 
-👉 **[Get the OpenMow AI App here](https://github.com/Ragsie/OpenMow-AI_app)** [![Build and Release OpenMow AI](https://github.com/Ragsie/OpenMow-AI_app/actions/workflows/build.yml/badge.svg)](https://github.com/Ragsie/OpenMow-AI_app/actions/workflows/build.yml)
+👉 **[Get the OpenMow AI App here](https://github.com/Ragsie/OpenMow-AI_app)** 
 
 ### Why
 This project started out of frustration: my current Worx M600 Plus has a bad habit of digging holes in my lawn instead of cutting the grass. Rather than just buying a new mower, I decided to build my own and learn a new tech stack along the way. While there are plenty of open-source DIY mowers available, my goal is to build this from the ground up to deeply understand the mechanics and software behind it. I want to learn by doing, not just by copying and pasting an existing setup.
@@ -19,7 +19,7 @@ This project started out of frustration: my current Worx M600 Plus has a bad hab
 I'll document the whole journey here. If you have a mower tearing up your lawn too, I hope this can serve as some inspiration for your own build.
 
 ### 🤖 OpenMow AI Architecture
-An advanced, fully autonomous lawn mower built on a Worx Landroid chassis. This project upgrades the original hardware with a modern ROS 2 (Humble/Jazzy) stack, VESC motor controllers, I2C Time-of-Flight (ToF) sensors, and real-time AI vision using YOLOv8/11 for ultimate safety.
+An advanced, fully autonomous lawn mower built on a Worx Landroid chassis. This project upgrades the original hardware with a modern ROS 2 (Humble/Jazzy) stack, VESC motor controllers, and real-time depth and AI vision using YOLO26n-seg retrained on a my own dataset for ultimate safety.
 
 #### 🌟 Features
 *   **ROS 2 Nav2:** Dynamic path planning and obstacle avoidance.
