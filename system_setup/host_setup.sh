@@ -1,133 +1,101 @@
-#!/bin/bash
-# Complete Docker Host Provisioning Script for "NuroMow AI" / "Worx ROS 2 Mower"
-# Target OS: Ubuntu (Orange Pi OS / Ubuntu Server)
+#!/usr/bin/env bash
+# NuroMow Værtsopsætning til Orange Pi 5 Ultra (RK3588, Ubuntu 22.04 LTS / Debian 12)
+set -e
 
-if [ "$EUID" -ne 0 ]; then
-  echo "❌ Error: This script must be run with sudo!"
-  exit 1
+echo "=== Initialiserer NuroMow Host Setup ==="
+
+# 1. Opret eller indlæs central konfigurationsfil (nuromow.env) 🆕 [HELT NY INTEGRATION: Single Source of Truth]
+ENV_FILE="$(dirname "$0")/nuromow.env"
+if [ ! -f "$ENV_FILE" ]; then
+    echo "Ingen nuromow.env fundet. Opretter standard konfiguration..."
+    sudo mkdir -p /etc/nuromow
+    # Kopier/opret fil med standardværdier
+    sudo tee "$ENV_FILE" > /dev/null << 'EOF'
+NUROMOW_TRACK_WIDTH=0.40
+NUROMOW_ROBOT_RADIUS=0.28
+NUROMOW_NAV2_INFLATION_RADIUS=0.48
+NUROMOW_VESC_LEFT_ID=1
+NUROMOW_VESC_RIGHT_ID=2
+NUROMOW_CAMERA_BASELINE=0.06
+NUROMOW_CAMERA_FOCAL_LENGTH=350.0
+NUROMOW_CAMERA_HEIGHT_Z=0.10
+NUROMOW_CAMERA_OFFSET_X=0.25
+NUROMOW_CAMERA_PITCH_Y=0.0
+NUROMOW_GPS_OFFSET_X=-0.15
+NUROMOW_GPS_HEIGHT_Z=0.25
+
+# --- MLOPS / LOKAL NFS AI TRÆNINGSSERVER ---
+# Angiv IP på din lokale GPU server (f.eks. 192.168.1.100). Lad være tom ("") hvis ikke brugt.
+NUROMOW_NFS_SERVER_IP=""
+NUROMOW_NFS_SHARE="/mnt/nfs/nuromow_raw"
+EOF
+    # Opret også et link i /etc til nem adgang
+    sudo ln -sf "$(realpath "$ENV_FILE")" /etc/nuromow/nuromow.env
 fi
 
-echo "======================================================"
-echo "🚀 NuroMow AI - Host Provisioning & Deployment Setup"
-echo "======================================================"
-echo ""
-echo "Select deployment profile:"
-echo "  1) Cloud Mode (Pure OTA via GitHub & Watchtower - No Local Server)"
-echo "  2) Local Mode (Mounts Local Server for Dataset Collection & Custom Upload Path)"
-echo ""
-read -rp "Enter choice [1 or 2]: " DEPLOY_MODE
+# Eksporter variabler, så de er tilgængelige i systemet under kørslen
+export $(grep -v '^#' "$ENV_FILE" | xargs)
 
-if [[ "$DEPLOY_MODE" != "1" && "$DEPLOY_MODE" != "2" ]]; then
-    echo "❌ Invalid selection. Aborting."
-    exit 1
+# 2. Opdater system og installer grundlæggende værktøjer + NFS support
+sudo apt-get update && sudo apt-get install -y     curl     git     udev     can-utils     v4l-utils     python3-pip     nfs-common
+
+# 2.5 Opret datamapper og opsæt eventuel NFS Auto-mount til AI-træningsserver
+echo "Konfigurerer datamapper og filsystem..."
+sudo mkdir -p /opt/nuromow/models
+sudo mkdir -p /opt/nuromow/incoming_raw
+sudo chmod -R 777 /opt/nuromow
+
+# 🆕 [TILFØJET: Opret persistent statistik-fil til kilometertæller og driftstimer]
+if [ ! -f /opt/nuromow/stats.json ]; then
+    echo '{"total_distance_km": 0.0, "total_runtime_hours": 0.0}' | sudo tee /opt/nuromow/stats.json
+    sudo chmod 777 /opt/nuromow/stats.json
 fi
 
-# 1. Debloat
-echo "🧹 Removing unnecessary bloatware..."
-systemctl stop snapd 2>/dev/null || true
-apt-get purge cloud-init snapd modemmanager multipath-tools unattended-upgrades -y
-apt-get autoremove -y
-
-# 2. Update packages
-echo "🔄 Updating system packages..."
-apt-get update && apt-get upgrade -y
-
-# 3. Grant hardware permissions (NPU, Serial, Video, I2C)
-echo "🔑 Setting up hardware access permissions..."
-TARGET_USER="${SUDO_USER:-$USER}"
-usermod -aG dialout "$TARGET_USER"
-usermod -aG video "$TARGET_USER"
-usermod -aG i2c "$TARGET_USER" 2>/dev/null || true
-
-if [ -e /dev/rknn ]; then
-  chmod 0666 /dev/rknn
-fi
-
-# 4. Mode-specific configuration
-if [ "$DEPLOY_MODE" == "2" ]; then
-    echo ""
-    echo "📁 --- Local Server Storage Setup ---"
-    apt-get install nfs-common -y
-    
-    # Prompt for Server IP
-    read -rp "Enter Local Server IP (e.g. 192.168.1.100): " SERVER_IP
-    
-    # Prompt for Root NFS Share Path
-    read -rp "Enter Server NFS Export Path [default: /mnt/Meta-pool/yolo_training]: " SERVER_PATH
-    SERVER_PATH="${SERVER_PATH:-/mnt/Meta-pool/yolo_training}"
-    
-    # Prompt for specific raw image directory
-    read -rp "Enter upload subfolder name [default: incoming_raw]: " RAW_SUBFOLDER
-    RAW_SUBFOLDER="${RAW_SUBFOLDER:-incoming_raw}"
-
-    LOCAL_MOUNT_POINT="/mnt/local_ai_server"
-    mkdir -p "$LOCAL_MOUNT_POINT"
-    
-    # Mount NFS share
-    echo "🔗 Connecting to ${SERVER_IP}:${SERVER_PATH}..."
-    mount -t nfs "${SERVER_IP}:${SERVER_PATH}" "$LOCAL_MOUNT_POINT" 2>/dev/null || echo "⚠️ Warning: Could not mount NFS immediately. Ensure server is online."
-
-    # Persistent fstab entry
-    FSTAB_ENTRY="${SERVER_IP}:${SERVER_PATH} ${LOCAL_MOUNT_POINT} nfs defaults,_netdev,nofail 0 0"
-    if ! grep -q "$LOCAL_MOUNT_POINT" /etc/fstab; then
-        echo "$FSTAB_ENTRY" >> /etc/fstab
+if [ -n "$NUROMOW_NFS_SERVER_IP" ]; then # 🆕 [OPDATERET: Tilføjet robust NFS systemd-automount til MLOps]
+    echo "Lokal AI Træningsserver fundet ($NUROMOW_NFS_SERVER_IP). Konfigurerer systemd-automount i /etc/fstab..."
+    # Kontroller om linjen allerede findes
+    if ! grep -q "$NUROMOW_NFS_SHARE" /etc/fstab; then
+        echo "Tilføjer mount-regel til /etc/fstab..."
+        echo "${NUROMOW_NFS_SERVER_IP}:${NUROMOW_NFS_SHARE} /opt/nuromow/incoming_raw nfs defaults,noauto,x-systemd.automount,x-systemd.device-timeout=10,_netdev,rw,nofail 0 0" | sudo tee -a /etc/fstab
     fi
-
-    # Create target directories on the mounted share
-    mkdir -p "${LOCAL_MOUNT_POINT}/${RAW_SUBFOLDER}"
-    mkdir -p "${LOCAL_MOUNT_POINT}/models"
-   
-    # Save to environment file for docker-compose
-    {
-        echo "AI_MODE=local"
-        echo "UPLOAD_RAW_FRAMES=true"
-        echo "LOCAL_STORAGE_PATH=${LOCAL_MOUNT_POINT}"
-        echo "RAW_UPLOAD_FOLDER=${RAW_SUBFOLDER}"
-    } > .env
-
-    echo "✅ Local Mode configured."
-    echo "   Mounted: ${SERVER_IP}:${SERVER_PATH} -> ${LOCAL_MOUNT_POINT}"
-    echo "   Target Upload Path: ${LOCAL_MOUNT_POINT}/${RAW_SUBFOLDER}"
+    echo "Genindlæser systemd og mounter NFS..."
+    sudo systemctl daemon-reload || true
+    sudo mount /opt/nuromow/incoming_raw || true
 else
-    echo "☁️ Configuring Cloud Mode..."
-    {
-        echo "AI_MODE=cloud"
-        echo "UPLOAD_RAW_FRAMES=false"
-        echo "LOCAL_STORAGE_PATH=/dev/null"
-        echo "RAW_UPLOAD_FOLDER=none"
-    } > .env
-    echo "✅ Cloud Mode configured. Watchtower OTA active."
+    echo "Ingen lokal NFS AI-træningsserver angivet i nuromow.env. Billeder gemmes lokalt på NVMe-disken."
 fi
 
-# 5. Install Docker & Compose Plugin
-echo "🐳 Installing Docker Engine..."
-for pkg in docker.io docker-doc docker-compose docker-compose-v2 podman-docker containerd runc; do 
-    apt-get remove -y "$pkg" 2>/dev/null || true
-done
-
-apt-get install ca-certificates curl -y
-install -m 0755 -d /etc/apt/keyrings
-curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
-chmod a+r /etc/apt/keyrings/docker.asc
-
-# shellcheck disable=SC1091
-echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
-
-apt-get update
-apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin -y
-usermod -aG docker "$TARGET_USER"
-
-# 6. Start the Docker Stack
-echo "📥 Pulling and launching Docker services..."
-if [ -f "docker-compose.yaml" ] || [ -f "docker-compose.yml" ]; then
-    sudo -u "$TARGET_USER" docker compose pull
-    sudo -u "$TARGET_USER" docker compose up -d
-else
-    echo "⚠️ docker-compose.yaml not found. Skipping automatic container start."
+# 3. Installer Docker og konfigurer tilladelser
+if ! [ -x "$(command -v docker)" ]; then
+    echo "Docker ikke fundet. Installerer Docker Engine..."
+    curl -fsSL https://get.docker.com -o get-docker.sh
+    sh get-docker.sh
+    sudo usermod -aG docker $USER
+    rm get-docker.sh
 fi
 
-echo "======================================================"
-echo "✅ Setup successfully finished!"
-echo "🔄 Rebooting machine to apply permission changes..."
-echo "======================================================"
-reboot
+# 4. Opret udev-regler for at give faste symbolske links til hardwaren
+echo "Konfigurerer udev-regler for USB-enheder (ESP32, GPS, Kamera)..."
+sudo tee /etc/udev/rules.d/99-nuromow.rules << 'EOF'
+# ESP32 Micro-ROS Controller (CP2102 USB-to-UART)
+SUBSYSTEMS=="usb", ATTRS{idVendor}=="10c4", ATTRS{idProduct}=="ea60", SYMLINK+="ttyUSB_esp32", MODE="0666"
+
+# Quectel LC29H RTK-GPS Modtager (Rover)
+SUBSYSTEMS=="usb", ATTRS{idVendor}=="1a86", ATTRS{idProduct}=="7523", SYMLINK+="ttyUSB_gps_rover", MODE="0666"
+
+# GXIVISION 3D Stereo Kamera (USB-enhed)
+SUBSYSTEMS=="video4linux", ATTRS{idVendor}=="0c45", ATTRS{idProduct}=="6366", SYMLINK+="video_stereo", MODE="0666"
+EOF
+
+# Genindlæs udev-regler
+sudo udevadm control --reload-rules && sudo udevadm trigger
+echo "Udev-regler genindlæst. Enheder vil nu få korrekte navne (f.eks. /dev/ttyUSB_esp32)."
+
+# 5. Optimer ydelsesprofilen (Set CPU & NPU Governors til 'performance')
+echo "Sætter RK3588 CPU- og NPU-kerner til Performance-mode..."
+echo "performance" | sudo tee /sys/devices/system/cpu/cpufreq/policy0/scaling_governor || true
+echo "performance" | sudo tee /sys/devices/system/cpu/cpufreq/policy4/scaling_governor || true
+echo "performance" | sudo tee /sys/devices/system/cpu/cpufreq/policy6/scaling_governor || true
+echo "performance" | sudo tee /sys/class/devfreq/fb000000.npu/governor || true
+
+echo "=== System Setup Gennemført! ==="

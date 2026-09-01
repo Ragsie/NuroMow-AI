@@ -1,173 +1,318 @@
 #include <Arduino.h>
-#include <micro_ros_arduino.h>
+#include <micro_ros_platformio.h>
 #include <rcl/rcl.h>
 #include <rclc/rclc.h>
 #include <rclc/executor.h>
 #include <geometry_msgs/msg/twist.h>
-#include <geometry_msgs/msg/vector3.h> 
-#include <std_msgs/msg/bool.h>
-#include <std_msgs/msg/string.h>
-#include "driver/twai.h"
+#include <sensor_msgs/msg/battery_state.h>
+#include <std_msgs/msg/int32.h>
+#include <std_msgs/msg/float32.h>
+#include <driver/twai.h>
 
-// --- PIN DEFINITIONS ---
-#define CAN_TX_PIN GPIO_NUM_5
-#define CAN_RX_PIN GPIO_NUM_4
-#define SHIELD_SENSOR_PIN 15
+#define CAN_TX_PIN GPIO_NUM_21
+#define CAN_RX_PIN GPIO_NUM_22
+#define BUMPER_PIN 15
+#define RELAY_PIN  4
 
-// --- MICRO-ROS VARIABLES ---
-rcl_subscription_t cmd_vel_subscriber;
-geometry_msgs__msg__Twist twist_msg;
+// Daly BMS UART pins (Serial2 on ESP32)
+#define BMS_RX_PIN 16
+#define BMS_TX_PIN 17
 
-rcl_subscription_t e_stop_subscriber;
-std_msgs__msg__Bool e_stop_msg;
+// Autoro VESC-id'er på CAN-bussen
+#define VESC_LEFT_ID  1
+#define VESC_RIGHT_ID 2
 
-rcl_subscription_t config_subscriber;
-geometry_msgs__msg__Vector3 config_msg;
-
+rcl_subscription_t subscriber;
+rcl_publisher_t battery_pub;                // 🆕 [TILFØJET: ROS 2 Batteri-udgiver]
+rcl_publisher_t state_pub;                  // 🆕 [TILFØJET: ROS 2 Systemstate-udgiver]
+rcl_publisher_t cycles_pub;                 // 🆕 [TILFØJET: ROS 2 Cykler-udgiver]
+rcl_publisher_t drive_current_pub;          // 🆕 [TILFØJET: ROS 2 Drive-current udgiver]
+geometry_msgs__msg__Twist msg_twist;
+sensor_msgs__msg__BatteryState battery_msg;  // 🆕 [TILFØJET: ROS 2 Batteri-meddelelse]
+std_msgs__msg__Int32 state_msg;             // 🆕 [TILFØJET: ROS 2 Systemstate-meddelelse]
+std_msgs__msg__Int32 cycles_msg;            // 🆕 [TILFØJET: ROS 2 Cykler-meddelelse]
+std_msgs__msg__Float32 drive_current_msg;   // 🆕 [TILFØJET: ROS 2 Drive-current meddelelse]
 rclc_executor_t executor;
 rclc_support_t support;
 rcl_allocator_t allocator;
 rcl_node_t node;
 
-// --- DYNAMIC PHYSICAL DIMENSIONS ---
-float wheel_radius = 0.1075; // 10.75 cm in meters
-float wheel_base = 0.350;    // 35.0 cm track width in meters
+volatile bool emergency_stop = false;
+unsigned long last_bms_request = 0;         // 🆕 [TILFØJET: BMS polling timer]
+const unsigned long BMS_INTERVAL = 1000;    // Anmod om data hvert sekund
 
-// --- SAFETY FLAGS ---
-volatile bool bumper_e_stop_active = false;
-bool ai_e_stop_active = false;
+int32_t expected_erpm_left = 0;
+int32_t expected_erpm_right = 0;
+bool drive_stuck = false;
+unsigned long last_state_publish = 0;
+float left_current = 0.0;
+float right_current = 0.0;
 
-// --- VESC CAN-BUS CONSTANTS ---
-const uint8_t VESC_ID_RIGHT = 1;
-const uint8_t VESC_ID_LEFT = 2;
-const uint32_t VESC_CAN_PACKET_SET_RPM = 3;
-const int POLE_PAIRS = 15; 
+// Hardware Interrupt: Aktiveres øjeblikkeligt ved fysisk kollision eller STOP-knap
+void IRAM_ATTR handleBumper() {
+    emergency_stop = true;
+    digitalWrite(RELAY_PIN, LOW); // Afbryd strømmen til 40A bilrelæet med det samme!
+    twai_stop();                 // Luk CAN-bussen for at hindre enhver motorrotation
+}
 
-// --- STATUS PUBLISHER ---
-rcl_publisher_t status_publisher;
-std_msgs__msg__String status_msg;
+// Initialiser TWAI driver ved 500 kbps
+void init_twai() {
+    twai_general_config_t g_config = TWAI_GENERAL_CONFIG_DEFAULT(CAN_TX_PIN, CAN_RX_PIN, TWAI_MODE_NORMAL);
+    twai_timing_config_t t_config = TWAI_TIMING_CONFIG_500KBITS();
+    twai_filter_config_t f_config = TWAI_FILTER_CONFIG_ACCEPT_ALL();
 
-// --- HELPER FUNCTION: Send RPM to VESC ---
-void send_vesc_rpm(uint8_t controller_id, float target_rpm) {
+    if (twai_driver_install(&g_config, &t_config, &f_config) == ESP_OK) {
+        twai_start();
+        Serial.println("TWAI (CAN) Driver installeret og startet.");
+    } else {
+        Serial.println("Kunne ikke installere TWAI-driveren.");
+    }
+}
+
+// Send ERPM-kommando til VESC over CAN med extended frames (VESC specifik protokol)
+void send_vesc_erpm(uint8_t controller_id, int32_t erpm) {
+    if (emergency_stop) return;
+
     twai_message_t message;
-    message.identifier = (VESC_CAN_PACKET_SET_RPM << 8) | controller_id;
-    message.extd = 1;
-    message.rtr = 0;
+    message.identifier = (0x03 << 8) | controller_id; // CAN_PACKET_SET_RPM ID
+    message.extd = 1; // Extended frame
     message.data_length_code = 4;
-    
-    int32_t erpm = (int32_t)(target_rpm * POLE_PAIRS);
+
     message.data[0] = (erpm >> 24) & 0xFF;
     message.data[1] = (erpm >> 16) & 0xFF;
     message.data[2] = (erpm >> 8) & 0xFF;
     message.data[3] = erpm & 0xFF;
-    
-    twai_transmit(&message, pdMS_TO_TICKS(1));
+
+    twai_transmit(&message, pdMS_TO_TICKS(10));
 }
 
-// --- KINEMATICS ---
-void calculate_motor_rpm(float v, float omega, float &rpm_right, float &rpm_left) {
-    float v_r = v + (omega * wheel_base / 2.0);
-    float v_l = v - (omega * wheel_base / 2.0);
-    rpm_right = (v_r * 60.0) / (2.0 * PI * wheel_radius);
-    rpm_left = (v_l * 60.0) / (2.0 * PI * wheel_radius);
-}
-
-// --- ISR: Bumper hits obstacle ---
-void IRAM_ATTR shieldHitISR() {
-    bumper_e_stop_active = true;
-}
-
-// --- CALLBACK: YOLO AI Emergency Stop ---
-void e_stop_callback(const void * msgin) {
-    const std_msgs__msg__Bool * msg = (const std_msgs__msg__Bool *)msgin;
-    ai_e_stop_active = msg->data;
-    if (ai_e_stop_active) {
-        send_vesc_rpm(VESC_ID_RIGHT, 0.0);
-        send_vesc_rpm(VESC_ID_LEFT, 0.0);
+// 🆕 [OPDATERET: Forespørg Daly BMS data dynamisk med checksum-beregning]
+void request_bms_data(uint8_t cmd_type) {
+    uint8_t cmd[13] = {0xA5, 0x40, cmd_type, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+    uint8_t checksum = 0;
+    for (int i = 0; i < 12; i++) {
+        checksum += cmd[i];
     }
+    cmd[12] = checksum;
+    Serial2.write(cmd, 13);
 }
 
-// --- CALLBACK: Dynamic Configuration ---
-void config_callback(const void * msgin) {
-    const geometry_msgs__msg__Vector3 * msg = (const geometry_msgs__msg__Vector3 *)msgin;
-    if (msg->x > 0.0) { wheel_radius = msg->x; }
-    if (msg->y > 0.0) { wheel_base = msg->y; }
-}
+// 🆕 [OPDATERET: Læs og dekoder modtagne UART-pakker fra Daly BMS (inkl. 0x90, 0x91, og 0x92)]
+void read_bms_data() {
+    if (Serial2.available() >= 13) {
+        while (Serial2.available() >= 13 && Serial2.peek() != 0xA5) {
+            Serial2.read();
+        }
 
-// --- CALLBACK: Nav2 Driving Commands ---
-void cmd_vel_callback(const void * msgin) {
-    const geometry_msgs__msg__Twist * msg = (const geometry_msgs__msg__Twist *)msgin;
-    
-    // Safety check: Ignore command if bumper hit OR AI hazard
-    if (bumper_e_stop_active || ai_e_stop_active) {
-        return;
-    }
-    
-    float linear_x = msg->linear.x;
-    float angular_z = msg->angular.z;
-    
-    // ANTI-LAWN-TEARING FILTER
-    if (abs(linear_x) < 0.05 && abs(angular_z) > 0.0) {
-        if (angular_z > 0) {
-            angular_z = 0.2; 
-        } else {
-            angular_z = -0.2; 
+        if (Serial2.available() < 13) return;
+
+        uint8_t buffer[13];
+        Serial2.readBytes(buffer, 13);
+
+        uint8_t checksum = 0;
+        for (int i = 0; i < 12; i++) {
+            checksum += buffer[i];
+        }
+
+        if (checksum == buffer[12]) {
+            if (buffer[1] == 0x80) {
+                if (buffer[2] == 0x90) { // Spænding, strøm, SOC
+                    float voltage = ((buffer[4] << 8) | buffer[5]) / 10.0;
+                    float current = (((buffer[8] << 8) | buffer[9]) - 30000) / 10.0;
+                    float soc = ((buffer[10] << 8) | buffer[11]) / 10.0;
+
+                    battery_msg.voltage = voltage;
+                    battery_msg.current = current;
+                    battery_msg.percentage = soc / 100.0;
+                    battery_msg.present = true;
+                    rcl_publish(&battery_pub, &battery_msg, NULL);
+                }
+                else if (buffer[2] == 0x91) { // 🆕 Opladningscykler
+                    uint16_t cycles = (buffer[8] << 8) | buffer[9];
+                    cycles_msg.data = cycles;
+                    rcl_publish(&cycles_pub, &cycles_msg, NULL);
+                }
+                else if (buffer[2] == 0x92) { // 🆕 Maksimal temperatur
+                    int8_t max_temp = buffer[4] - 40; // 40 °C offset
+                    battery_msg.temperature = max_temp;
+                    battery_msg.present = true;
+                    rcl_publish(&battery_pub, &battery_msg, NULL);
+                }
+            }
         }
     }
-    
-    float rpm_right = 0.0;
-    float rpm_left = 0.0;
-    calculate_motor_rpm(linear_x, angular_z, rpm_right, rpm_left);
-    send_vesc_rpm(VESC_ID_RIGHT, rpm_right);
-    send_vesc_rpm(VESC_ID_LEFT, rpm_left);
+}
+
+// Callback-funktion for ROS 2 Twist (/cmd_vel)
+void subscription_callback(const void * msvgin) {
+    const geometry_msgs__msg__Twist * msg = (const geometry_msgs__msg__Twist *)msvgin;
+
+    double linear_x = msg->linear.x;
+    double angular_z = msg->angular.z;
+
+    // ANTI-LAWN-TEARING FILTER
+    if (abs(angular_z) > 0.5 && abs(linear_x) < 0.05) {
+        angular_z = (angular_z > 0) ? 0.2 : -0.2;
+        linear_x = 0.08;
+    }
+
+    double track_width = TRACK_WIDTH;
+    double speed_left = linear_x - (angular_z * track_width / 2.0);
+    double speed_right = linear_x + (angular_z * track_width / 2.0);
+
+    expected_erpm_left = speed_left * 3000.0;
+    expected_erpm_right = speed_right * 3000.0;
+
+    if (abs(linear_x) < 0.01 && abs(angular_z) < 0.01) {
+        drive_stuck = false;
+    }
+
+    if (!drive_stuck) {
+        send_vesc_erpm(VESC_LEFT_ID, expected_erpm_left);
+        send_vesc_erpm(VESC_RIGHT_ID, -expected_erpm_right);
+    } else {
+        send_vesc_erpm(VESC_LEFT_ID, 0);
+        send_vesc_erpm(VESC_RIGHT_ID, 0);
+    }
+}
+
+// 🆕 [TILFØJET: Læs VESC feedback, overvåg hjulstrøm, og find ud af om motoren er fastklemt]
+void read_drive_telemetry() {
+    twai_message_t rx_msg;
+    while (twai_receive(&rx_msg, 0) == ESP_OK) {
+        uint32_t id = rx_msg.identifier;
+        uint8_t cmd = (id >> 8) & 0xFF;
+        uint8_t sender_id = id & 0xFF;
+
+        if (cmd == 0x09) { // CAN_PACKET_STATUS_1
+            int32_t rpm = (rx_msg.data[0] << 24) | (rx_msg.data[1] << 16) | (rx_msg.data[2] << 8) | rx_msg.data[3];
+            float current = ((int16_t)((rx_msg.data[4] << 8) | rx_msg.data[5])) / 10.0;
+
+            if (sender_id == VESC_LEFT_ID) {
+                left_current = abs(current);
+                if (abs(expected_erpm_left) > 1000 && abs(rpm) < 50 && left_current > 15.0) {
+                    drive_stuck = true;
+                }
+            }
+            if (sender_id == VESC_RIGHT_ID) {
+                right_current = abs(current);
+                if (abs(expected_erpm_right) > 1000 && abs(rpm) < 50 && right_current > 15.0) {
+                    drive_stuck = true;
+                }
+            }
+        }
+    }
+
+    unsigned long now = millis();
+    if (now - last_state_publish >= 1000) {
+        last_state_publish = now;
+
+        // Publicer samlet kørehjul-strøm
+        drive_current_msg.data = left_current + right_current;
+        rcl_publish(&drive_current_pub, &drive_current_msg, NULL);
+
+        if (emergency_stop) {
+            state_msg.data = 5; // NØDSTOP / BUMPER
+        } else if (drive_stuck) {
+            state_msg.data = 4; // STUCK
+        } else if (abs(expected_erpm_left) > 0 || abs(expected_erpm_right) > 0) {
+            state_msg.data = 1; // KLIPPER / KØRER
+        } else {
+            state_msg.data = 0; // STOP
+        }
+        rcl_publish(&state_pub, &state_msg, NULL);
+    }
 }
 
 void setup() {
     Serial.begin(115200);
-    
-    pinMode(SHIELD_SENSOR_PIN, INPUT_PULLUP);
-    attachInterrupt(digitalPinToInterrupt(SHIELD_SENSOR_PIN), shieldHitISR, FALLING);
-    
-    twai_general_config_t g_config = TWAI_GENERAL_CONFIG_DEFAULT(CAN_TX_PIN, CAN_RX_PIN, TWAI_MODE_NORMAL);
-    twai_timing_config_t t_config = TWAI_TIMING_CONFIG_500KBITS();
-    twai_filter_config_t f_config = TWAI_FILTER_CONFIG_ACCEPT_ALL();
-    
-    if (twai_driver_install(&g_config, &t_config, &f_config) == ESP_OK) {
-        twai_start();
-    }
-    
+
+    // Konfigurer Daly BMS UART (Serial2)
+    Serial2.begin(9600, SERIAL_8N1, BMS_RX_PIN, BMS_TX_PIN);
+    Serial.println("Daly Smart BMS UART2 (9600 baud) startet.");
+
+    pinMode(BUMPER_PIN, INPUT_PULLUP);
+    pinMode(RELAY_PIN, OUTPUT);
+    digitalWrite(RELAY_PIN, HIGH);
+
+    attachInterrupt(digitalPinToInterrupt(BUMPER_PIN), handleBumper, FALLING);
+
+    init_twai();
     set_microros_transports();
-    delay(2000);
-    
+
     allocator = rcl_get_default_allocator();
     rclc_support_init(&support, 0, NULL, &allocator);
-    rclc_node_init_default(&node, "esp32_drive_controller", "", &support);
+    rclc_node_init_default(&node, "drive_controller", "", &support);
 
-    // Subscriptions
-    rclc_subscription_init_default(&cmd_vel_subscriber, &node, ROSIDL_GET_MSG_TYPE_SUPPORT(geometry_msgs, msg, Twist), "/cmd_vel");
-    rclc_subscription_init_default(&e_stop_subscriber, &node, ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Bool), "/e_stop");
-    rclc_subscription_init_default(&config_subscriber, &node, ROSIDL_GET_MSG_TYPE_SUPPORT(geometry_msgs, msg, Vector3), "/robot_config");
-    
-    // Executor
-    rclc_executor_init(&executor, &support.context, 3, &allocator);
-    rclc_executor_add_subscription(&executor, &cmd_vel_subscriber, &twist_msg, &cmd_vel_callback, ON_NEW_DATA);
-    rclc_executor_add_subscription(&executor, &e_stop_subscriber, &e_stop_msg, &e_stop_callback, ON_NEW_DATA);
-    rclc_executor_add_subscription(&executor, &config_subscriber, &config_msg, &config_callback, ON_NEW_DATA);
-    
-    // Publisher
-    rclc_publisher_init_default(&status_publisher, &node, ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, String), "/mower/status");
+    rclc_subscription_init_default(
+        &subscriber,
+        &node,
+        ROSIDL_GET_MSG_TYPE_SUPPORT(geometry_msgs, msg, Twist),
+        "/cmd_vel"
+    );
+
+    rclc_publisher_init_default(
+        &battery_pub,
+        &node,
+        ROSIDL_GET_MSG_TYPE_SUPPORT(sensor_msgs, msg, BatteryState),
+        "/battery_state"
+    );
+
+    rclc_publisher_init_default(
+        &state_pub,
+        &node,
+        ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int32),
+        "/mower/state"
+    );
+
+    rclc_publisher_init_default(
+        &cycles_pub,
+        &node,
+        ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int32),
+        "/battery/charge_cycles"
+    );
+
+    rclc_publisher_init_default(
+        &drive_current_pub,
+        &node,
+        ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32),
+        "/drive/current"
+    );
+
+    rclc_executor_init(&executor, &support.context, 1, &allocator);
+    rclc_executor_add_subscription(&executor, &subscriber, &msg_twist, &subscription_callback, ON_NEW_DATA);
 }
 
 void loop() {
-    rclc_executor_spin_some(&executor, RCL_MS_TO_NS(10));
-    
-    // Reset bumper state when clear
-    if (bumper_e_stop_active && digitalRead(SHIELD_SENSOR_PIN) == HIGH) {
-        bumper_e_stop_active = false;
+    if (!emergency_stop) {
+        rclc_executor_spin_some(&executor, RCL_MS_TO_NS(10));
+
+        // 🆕 [OPDATERET: 3-vejs BMS polling rotation: 0x90 (status), 0x91 (cykler), 0x92 (temperatur)]
+        unsigned long now = millis();
+        if (now - last_bms_request >= BMS_INTERVAL) {
+            last_bms_request = now;
+            static uint8_t bms_state = 0;
+            if (bms_state == 0) {
+                request_bms_data(0x90);
+                bms_state = 1;
+            } else if (bms_state == 1) {
+                request_bms_data(0x91);
+                bms_state = 2;
+            } else {
+                request_bms_data(0x92);
+                bms_state = 0;
+            }
+        }
+
+        read_bms_data();
+        read_drive_telemetry();
+    } else {
+        unsigned long now = millis();
+        if (now - last_state_publish >= 1000) {
+            last_state_publish = now;
+            state_msg.data = 5;
+            rcl_publish(&state_pub, &state_msg, NULL);
+        }
+        delay(100);
     }
-    
-    // Status heartbeat
-    status_msg.data.data = (char*)"MOWING";
-    status_msg.data.size = strlen(status_msg.data.data);
-    rcl_publish(&status_publisher, &status_msg, NULL);
 }

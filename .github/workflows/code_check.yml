@@ -85,4 +85,4 @@ jobs:
       - name: Test Docker build for yolo ai node
         run: |
          # build YOLO safty Dockerfile
-         docker build -t second-docker-test -f stereo_vision_node/Dockerfile stereo_vision_node/
+         docker build -t second-docker-test -f stereo_vision/Dockerfile stereo_vision/

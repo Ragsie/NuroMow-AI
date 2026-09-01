@@ -1,43 +1,52 @@
 <?xml version="1.0"?>
-<robot name="worx_mower">
-
-  <!-- ========================================== -->
-  <!-- BASE OF THE ROBOT                          -->
-  <!-- ========================================== -->
-  
-  <!-- Base Link: The mathematical center of the robot (usually center of the drive wheels) -->
+<robot name="nuromower">
+  <!-- Hovedchassis (base_link) -->
   <link name="base_link">
+    <visual>
+      <geometry>
+        <box size="0.6 0.4 0.3"/>
+      </geometry>
+      <material name="orange">
+        <color rgba="1.0 0.5 0.0 1.0"/>
+      </material>
+    </visual>
   </link>
 
-  <!-- Footprint: The actual ground directly below base_link -->
-  <link name="base_footprint">
-  </link>
-
-  <joint name="base_footprint_joint" type="fixed">
-    <parent link="base_footprint"/>
-    <child link="base_link"/>
-    <!-- Set Z to the distance from the ground to the center of your wheels (e.g., 5cm) -->
-    <origin xyz="0 0 0.05" rpy="0 0 0"/>
-  </joint>
-
-  <!-- ========================================== -->
-  <!-- STEREO CAMERA MOUNT                        -->
-  <!-- ========================================== -->
-  
-  <!-- Camera Link: Where the stereo camera is mounted -->
-  <link name="camera_link">
-  </link>
-
+  <!-- 3D Stereo Vision Kamera Joint -->
   <joint name="camera_joint" type="fixed">
     <parent link="base_link"/>
     <child link="camera_link"/>
-    <!-- GRAB A TAPE MEASURE:
-         xyz="X Y Z" (in meters)
-         X = Distance forward from wheel center
-         Y = Distance left/right from center (0 if perfectly centered)
-         Z = Height above wheel center
-         Example below: Mounted 20cm forward, perfectly centered, 15cm high. -->
-    <origin xyz="0.20 0.0 0.15" rpy="0 0 0"/>
+    <!-- Dynamiske parametre udlæses af launch-filen og indsprøjtes her --> 🆕 [DYNAMISKE PARAMS]
+    <origin xyz="{CAMERA_OFFSET_X} 0.0 {CAMERA_HEIGHT_Z}" rpy="0.0 {CAMERA_PITCH_Y} 0.0"/>
   </joint>
 
+  <link name="camera_link">
+    <visual>
+      <geometry>
+        <box size="0.03 0.12 0.03"/>
+      </geometry>
+      <material name="black">
+        <color rgba="0.1 0.1 0.1 1.0"/>
+      </material>
+    </visual>
+  </link>
+
+  <!-- GNSS / RTK-GPS Modtager Joint (Rover) -->
+  <joint name="gps_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="gps_link"/>
+    <!-- Dynamiske parametre udlæses af launch-filen og indsprøjtes her --> 🆕 [DYNAMISKE PARAMS]
+    <origin xyz="{GPS_OFFSET_X} 0.0 {GPS_HEIGHT_Z}" rpy="0.0 0.0 0.0"/>
+  </joint>
+
+  <link name="gps_link">
+    <visual>
+      <geometry>
+        <cylinder radius="0.05" length="0.02"/>
+      </geometry>
+      <material name="white">
+        <color rgba="1.0 1.0 1.0 1.0"/>
+      </material>
+    </visual>
+  </link>
 </robot>
