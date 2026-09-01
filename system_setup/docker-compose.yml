@@ -67,9 +67,9 @@ services:
     command: --interval 300 --cleanup
     restart: unless-stopped
 
-  # 7. nexamow-seg & PointCloud 3D Fusion Node
+  # 7. nuromow-seg & PointCloud 3D Fusion Node
   depth_fusion:
-    image: ragsie/nexamow-depth-fusion:latest
+    image: ragsie/nuromow-depth-fusion:latest
     container_name: depth_fusion
     network_mode: "host"
     privileged: true

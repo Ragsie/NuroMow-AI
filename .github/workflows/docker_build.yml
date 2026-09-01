@@ -61,7 +61,7 @@ jobs:
           push: true
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/app-backend:latest
 
-      # 7. Build and push the nexamow-seg.rknn depth node
+      # 7. Build and push the nuromow-seg.rknn depth node
       - name: Build and push Depth Fusion Node
         uses: docker/build-push-action@v5
         with:
