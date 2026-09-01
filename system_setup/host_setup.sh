@@ -76,7 +76,8 @@ if [ "$DEPLOY_MODE" == "2" ]; then
     # Create target directories on the mounted share
     mkdir -p "${LOCAL_MOUNT_POINT}/${RAW_SUBFOLDER}"
     mkdir -p "${LOCAL_MOUNT_POINT}/models"
-
+   
+    # shellcheck disable=SC2129
     # Save to environment file for docker-compose
     echo "AI_MODE=local" > .env
     echo "UPLOAD_RAW_FRAMES=true" >> .env
@@ -88,6 +89,7 @@ if [ "$DEPLOY_MODE" == "2" ]; then
     echo "   Target Upload Path: ${LOCAL_MOUNT_POINT}/${RAW_SUBFOLDER}"
 else
     echo "☁️ Configuring Cloud Mode..."
+    # shellcheck disable=SC2129
     echo "AI_MODE=cloud" > .env
     echo "UPLOAD_RAW_FRAMES=false" >> .env
     echo "LOCAL_STORAGE_PATH=/dev/null" >> .env
