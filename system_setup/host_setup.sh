@@ -77,23 +77,25 @@ if [ "$DEPLOY_MODE" == "2" ]; then
     mkdir -p "${LOCAL_MOUNT_POINT}/${RAW_SUBFOLDER}"
     mkdir -p "${LOCAL_MOUNT_POINT}/models"
    
-    # shellcheck disable=SC2129
     # Save to environment file for docker-compose
-    echo "AI_MODE=local" > .env
-    echo "UPLOAD_RAW_FRAMES=true" >> .env
-    echo "LOCAL_STORAGE_PATH=${LOCAL_MOUNT_POINT}" >> .env
-    echo "RAW_UPLOAD_FOLDER=${RAW_SUBFOLDER}" >> .env
+    {
+        echo "AI_MODE=local"
+        echo "UPLOAD_RAW_FRAMES=true"
+        echo "LOCAL_STORAGE_PATH=${LOCAL_MOUNT_POINT}"
+        echo "RAW_UPLOAD_FOLDER=${RAW_SUBFOLDER}"
+    } > .env
 
     echo "✅ Local Mode configured."
     echo "   Mounted: ${SERVER_IP}:${SERVER_PATH} -> ${LOCAL_MOUNT_POINT}"
     echo "   Target Upload Path: ${LOCAL_MOUNT_POINT}/${RAW_SUBFOLDER}"
 else
     echo "☁️ Configuring Cloud Mode..."
-    # shellcheck disable=SC2129
-    echo "AI_MODE=cloud" > .env
-    echo "UPLOAD_RAW_FRAMES=false" >> .env
-    echo "LOCAL_STORAGE_PATH=/dev/null" >> .env
-    echo "RAW_UPLOAD_FOLDER=none" >> .env
+    {
+        echo "AI_MODE=cloud"
+        echo "UPLOAD_RAW_FRAMES=false"
+        echo "LOCAL_STORAGE_PATH=/dev/null"
+        echo "RAW_UPLOAD_FOLDER=none"
+    } > .env
     echo "✅ Cloud Mode configured. Watchtower OTA active."
 fi
 
