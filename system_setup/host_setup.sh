@@ -45,8 +45,8 @@ fi
 # Export variables so they are available throughout the system at runtime
 # [FIXED: ShellCheck SC2046 and SC2163 compatible import via POSIX source]
 # shellcheck disable=SC1090
-# shellcheck source=/dev/null
 set -a
+# shellcheck source=/dev/null
 . "$ENV_FILE"
 set +a
 
