@@ -19,8 +19,13 @@
 #define BMS_TX_PIN 17
 
 // Autoro VESC IDs on CAN bus
+#ifndef VESC_LEFT_ID
 #define VESC_LEFT_ID  1
+#endif
+
+#ifndef VESC_RIGHT_ID
 #define VESC_RIGHT_ID 2
+#endif
 
 rcl_subscription_t subscriber;
 rcl_publisher_t battery_pub;                // Added: ROS 2 Battery publisher

@@ -57,6 +57,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Indlæs OmniMow miljøvariabler fra omnimow.env til GitHub Actions
+        run: |
+         grep -v '^#' system_setup/omnimow.env >> $GITHUB_ENV
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
