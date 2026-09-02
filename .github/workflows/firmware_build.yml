@@ -1,0 +1,4 @@
+- name: Prepare the PlatformIO virtual environment for micro-ROS
+  run: |
+    mkdir -p ~/.platformio/penv/bin
+    python3 -m venv ~/.platformio/penv

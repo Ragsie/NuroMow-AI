@@ -15,7 +15,7 @@ class DepthFusionNode(Node):
         self.bridge = CvBridge()
         self.publisher_mask = self.create_publisher(Image, '/vision/segmented_mask', 10)
 
-        # ROS 2 Parametre
+        # ROS 2 parameters
         self.declare_parameter('model_path', '/models/MowerAIn-seg.onnx')
         self.declare_parameter('confidence_threshold', 0.50)
         self.declare_parameter('active_learning_threshold', 0.20) # MLOps threshold
@@ -82,12 +82,12 @@ class DepthFusionNode(Node):
         # with low confidence (e.g., between 20% and 50%), save the image for nightly training.
         low_confidence_detected = False
 
-        # Hvis der findes tvivlsomme objekter, gemmes billedet til MLOps-indbakken over NFS
+        # If uncertain objects are detected, save the image to the MLOps inbox over NFS
         if low_confidence_detected:
             timestamp = int(time.time() * 1000)
             filepath = f"/incoming_raw/img_{timestamp}.jpg"
             cv2.imwrite(filepath, cv_image)
-            self.get_logger().info(f"Gemte tvivlsomt objekt til Active Learning: {filepath}")
+            self.get_logger().info(f"Saved uncertain object for active learning: {filepath}")
 
         # Scale the mask back to the original resolution
         full_mask = cv2.resize(mask, (orig_w, orig_h), interpolation=cv2.INTER_NEAREST)

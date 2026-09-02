@@ -4,7 +4,7 @@ set -e
 
 echo "=== Initializing NuroMow Host Setup for Radxa Dragon Q6A ==="
 
-# 1. Create or load the central configuration file (nuromow.env) 🆕 [UPDATED FOR MIPI CSI AND QUALCOMM]
+# 1. Create or load the central configuration file (nuromow.env) [updated for MIPI CSI and Qualcomm]
 ENV_FILE="$(dirname "$0")/nuromow.env"
 if [ ! -f "$ENV_FILE" ]; then
     echo "No nuromow.env found. Creating default configuration..."
@@ -42,12 +42,12 @@ EOF
     sudo ln -sf "$(realpath "$ENV_FILE")" /etc/nuromow/nuromow.env
 fi
 
-# Export variables so they are available to the system while it runs
-# ShellCheck SC2046 compliant loop
-while read -r line || [ -n "$line" ]; do
-    [[ "$line" =~ ^# ]] || [[ -z "$line" ]] && continue
-    export "$line"
-done < "$ENV_FILE"
+# Export variables so they are available throughout the system at runtime
+# [FIXED: ShellCheck SC2046 and SC2163 compatible import via POSIX source]
+# shellcheck disable=SC1090
+set -a
+. "$ENV_FILE"
+set +a
 
 # 2. Update the system and install core tools + NFS support + Qualcomm FastRPC daemons
 echo "Updating the system and installing system components..."
