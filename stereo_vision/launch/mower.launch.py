@@ -13,20 +13,23 @@ def generate_launch_description():
     with open(urdf_file, 'r') as infp:
         robot_desc = infp.read()
 
-    # Indlæs chassis og kameraspecifikationer fra miljøvariabler (fra nuromow.env) med robuste fallbacks 🆕 [DYNAMISK INDLÆSNING]
+    # Load chassis and camera specifications from environment variables (from nuromow.env) with robust fallbacks [DYNAMIC LOADING]
     camera_x = os.getenv('NUROMOW_CAMERA_OFFSET_X', '0.25')
     camera_z = os.getenv('NUROMOW_CAMERA_HEIGHT_Z', '0.10')
     camera_pitch = os.getenv('NUROMOW_CAMERA_PITCH_Y', '0.0')
     gps_x = os.getenv('NUROMOW_GPS_OFFSET_X', '-0.15')
     gps_z = os.getenv('NUROMOW_GPS_HEIGHT_Z', '0.25')
 
+    device_left = os.getenv('NUROMOW_CAMERA_DEVICE_LEFT', '/dev/video0')
+    device_right = os.getenv('NUROMOW_CAMERA_DEVICE_RIGHT', '/dev/video1')
+
     baseline = float(os.getenv('NUROMOW_CAMERA_BASELINE', '0.06'))
     focal_length = float(os.getenv('NUROMOW_CAMERA_FOCAL_LENGTH', '350.0'))
 
-    # 🆕 DYNAMISK NAV2 PARAMETER-INDSPRØJTNING TIL ASYMMETRISK SKÆREHOVED
-    # For at undgå at det asymmetriske skærehoved skraber mod forhindringer,
-    # indlæser vi Nav2 yaml-skabelonen og erstatter robot_radius og inflation_radius
-    # med værdierne direkte fra nuromow.env før kørsel.
+    # DYNAMIC NAV2 PARAMETER-INJECTION FOR ASYMMETRIC CUTTER HEAD
+    # To prevent the asymmetric cutter head from scraping against obstacles,
+    # we load the Nav2 yaml template and replace robot_radius and inflation_radius
+    # with values directly from nuromow.env before running.
     nav2_template_file = os.path.join(
         get_package_share_directory('stereo_vision'),
         'config',
@@ -44,12 +47,12 @@ def generate_launch_description():
             INFLATION_RADIUS=os.getenv('NUROMOW_NAV2_INFLATION_RADIUS', '0.48')
         )
 
-        # Gem den færdige runtime-konfiguration til Nav2
+        # Save the finished runtime configuration for Nav2
         with open(resolved_nav2_file, 'w') as f:
             f.write(nav2_resolved)
-        print(f"[NuroMow Launch] Dynamisk Nav2-konfiguration gemt i {resolved_nav2_file} med inflation={os.getenv('NUROMOW_NAV2_INFLATION_RADIUS', '0.48')}m")
+        print(f"[NuroMow Launch] Dynamic Nav2 configuration saved in {resolved_nav2_file} with inflation={os.getenv('NUROMOW_NAV2_INFLATION_RADIUS', '0.48')}m")
 
-    # Erstat pladsholderne i URDF-skabelonen dynamisk under opstart 🆕 [DYNAMISK TEMPLATE REPLACEMENT]
+    # Replace placeholders in the URDF template dynamically at startup [DYNAMIC TEMPLATE REPLACEMENT]
     robot_desc_formatted = robot_desc.format(
         CAMERA_OFFSET_X=camera_x,
         CAMERA_HEIGHT_Z=camera_z,
@@ -59,7 +62,7 @@ def generate_launch_description():
     )
 
     return LaunchDescription([
-        # Udgiv robottens transformationer (TF-træ med dynamisk formateret URDF)
+        # Publish robot transformations (TF-tree with dynamically formatted URDF)
         Node(
             package='robot_state_publisher',
             executable='robot_state_publisher',
@@ -67,14 +70,15 @@ def generate_launch_description():
             output='screen',
             parameters=[{'robot_description': robot_desc_formatted}]
         ),
-        # Start den centrale 3D Stereo Vision node (med parametre hentet fra nuromow.env)
+        # Start the central 3D Stereo Vision node (with parameters from nuromow.env) [MIGRATED TO DUAL CAM]
         Node(
             package='stereo_vision',
             executable='stereo_node.py',
             name='stereo_node',
             output='screen',
             parameters=[{
-                'video_device': '/dev/video_stereo',
+                'video_device_left': device_left,
+                'video_device_right': device_right,
                 'frame_id': 'camera_link',
                 'baseline': baseline,
                 'focal_length': focal_length,

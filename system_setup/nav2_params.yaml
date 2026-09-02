@@ -1,12 +1,12 @@
 # ==============================================================================
 # NuroMow ROS 2 Navigation2 (Nav2) Parameterkonfiguration
-# Optimeret til Orange Pi 5 Ultra & GXIVISION 3D Stereo Virtual LiDAR scan
+# Optimeret til Radxa Dragon Q6A (Qualcomm QCS6490, 12 TOPS Hexagon NPU) & GXIVISION 3D Stereo Virtual LiDAR scan
 # ==============================================================================
 
 amcl:
   ros__parameters:
     use_sim_time: False
-    # Bemærk: AMCL er deaktiveret i NuroMows aktive RTK-GPS navigations-launch,
+    # Note: AMCL is disabled in NuroMow's active RTK-GPS navigation launch,
     # da positionen leveres direkte af robot_localization (EKF) og RTK-GPS.
 
 bt_navigator:
@@ -46,28 +46,28 @@ controller_server:
       required_movement_radius: 0.5
       movement_time_allowance: 10.0
 
-    # Goal Checker (Centimeter-præcision matchet med RTK-GPS)
+    # Goal Checker (Centimeter precision matched with RTK-GPS)
     general_goal_checker:
       stateful: True
       plugin: "nav2_controller::SimpleGoalChecker"
-      xy_goal_tolerance: 0.05  # 5 cm tolerance (RTK muliggør dette!)
-      yaw_goal_tolerance: 0.08 # Ca. 4.5 graders vinkeltolerance
+      xy_goal_tolerance: 0.05  # 5 cm tolerance (RTK makes this possible!)
+      yaw_goal_tolerance: 0.08 # Approx. 4.5 degree angular tolerance
 
-    # Goal Checker (Centimeter-præcision matchet med RTK-GPS)
+    # Goal Checker (Centimeter precision matched with RTK-GPS)
     general_goal_checker:
       stateful: True
       plugin: "nav2_controller::SimpleGoalChecker"
-      xy_goal_tolerance: 0.05  # 5 cm tolerance (RTK muliggør dette!)
-      yaw_goal_tolerance: 0.08 # Ca. 4.5 graders vinkeltolerance
+      xy_goal_tolerance: 0.05  # 5 cm tolerance (RTK makes this possible!)
+      yaw_goal_tolerance: 0.08 # Approx. 4.5 degree angular tolerance
 
-    # 🆕 RPP-styrede hastigheds- og styreparametre til det asymmetriske Worx-chassis:
-    # Vi reducerer max linear fart en smule for højere præcision nær forhindringer.
-    # Lookahead_dist tilpasses dynamisk til at give en blødere indstyring.
+    # RPP-controlled speed and steering parameters for the asymmetric Worx chassis:
+    # We reduce max linear speed slightly for higher precision near obstacles.
+    # Lookahead_dist is adjusted dynamically to provide smoother steering.
     FollowPath:
       plugin: "nav2_regulated_pure_pursuit_controller::RegulatedPurePursuitController"
-      desired_linear_vel: 0.38  # 🆕 Reduceret fra 0.45 for øget kontrol ved asymmetriske sving
-      lookahead_dist: 0.5       # 🆕 Reduceret fra 0.6 for at reagere hurtigere på snævre grænser
-      min_lookahead_dist: 0.25  # 🆕 Reduceret fra 0.3 for snævre sving nær bede
+      desired_linear_vel: 0.38  # Reduced from 0.45 for increased control during asymmetric turns
+      lookahead_dist: 0.5       # Reduced from 0.6 to respond faster to narrow boundaries
+      min_lookahead_dist: 0.25  # Reduced from 0.3 for narrow turns near beds
       max_lookahead_dist: 0.8
       lookahead_time: 1.5
       rotate_to_heading_angular_vel: 0.30
@@ -75,10 +75,10 @@ controller_server:
       use_velocity_scaled_lookahead_dist: True
       use_regulated_linear_velocity_scaling: True
       regulated_linear_scaling_min_radius: 0.8
-      regulated_linear_scaling_min_speed: 0.12 # 🆕 Sænket fart i skarpe sving for at undgå skred
+      regulated_linear_scaling_min_speed: 0.12 # Reduced speed during sharp turns to avoid skidding
       use_cost_regulated_linear_velocity_scaling: True
-      cost_scaling_dist: 0.5                  # 🆕 Øget fra 0.4 - start deceleration tidligere
-      cost_scaling_factor: 12.0               # 🆕 Mere kognitiv og følsom opbremsning nær hjørner
+      cost_scaling_dist: 0.5                  # Increased from 0.4 - start deceleration earlier
+      cost_scaling_factor: 12.0               # More responsive braking near corners
       inflation_cost_scaling_factor: 4.0
 
 planner_server:
@@ -87,11 +87,11 @@ planner_server:
     use_sim_time: False
     planner_plugins: ["GridBased"]
 
-    # Global ruteplanlægger (Grid-baseret NavFn - robust og hurtig på RK3588)
+    # Global path planner (Grid-based NavFn - robust and fast on RK3588)
     GridBased:
       plugin: "nav2_navfn_planner/NavfnPlanner"
       tolerance: 0.1
-      use_astar: True # Anvend A* søgealgoritme i stedet for Dijkstra for lavere CPU-belastning
+      use_astar: True # Use A* search algorithm instead of Dijkstra for lower CPU load
 
 global_costmap:
   global_costmap:
@@ -101,15 +101,15 @@ global_costmap:
       global_frame: map
       robot_base_frame: base_link
       use_sim_time: False
-      robot_radius: {ROBOT_RADIUS} # 🆕 Dynamisk indsprøjtet # Worx Landroid M600 fysisk radius (inkl. margen)
-      resolution: 0.05   # 5 cm gridopløsning
+      robot_radius: {ROBOT_RADIUS} # Dynamically injected # Worx Landroid M600 physical radius (including margin)
+      resolution: 0.05   # 5 cm grid resolution
       plugins: ["static_layer", "obstacle_layer", "inflation_layer"]
 
       static_layer:
         plugin: "nav2_costmap_2d::StaticLayer"
         map_subscribe_transient_local: True
 
-      # Forhindringskortlægning baseret på vores Virtuelle LiDAR scan
+      # Obstacle mapping based on our Virtual LiDAR scan
       obstacle_layer:
         plugin: "nav2_costmap_2d::ObstacleLayer"
         enabled: True
@@ -123,14 +123,14 @@ global_costmap:
           data_type: "LaserScan"
           raytrace_max_range: 3.0
           raytrace_min_range: 0.1
-          obstacle_max_range: 2.2 # Hold klipperen fokuseret på nære forhindringer
+          obstacle_max_range: 2.2 # Keep mower focused on nearby obstacles
           obstacle_min_range: 0.1
 
-      # Inflationslag (Hvor tæt må vi køre på forhindringer)
+      # Inflation layer (How close can we drive to obstacles)
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
         cost_scaling_factor: 8.0
-        inflation_radius: {INFLATION_RADIUS} # 🆕 Dynamisk indsprøjtet # Giver ca 7-10 cm sikkerhedsmargen ud over robotradius
+        inflation_radius: {INFLATION_RADIUS} # Dynamically injected # Provides approximately 7-10 cm safety margin beyond robot radius
 
 local_costmap:
   local_costmap:
@@ -141,10 +141,10 @@ local_costmap:
       robot_base_frame: base_link
       use_sim_time: False
       rolling_window: True
-      width: 4.0   # 4 x 4 meter lokalt arbejdsvindue omkring klipperen
+      width: 4.0   # 4 x 4 meter local work window around the mower
       height: 4.0
       resolution: 0.05
-      robot_radius: {ROBOT_RADIUS} # 🆕 Dynamisk indsprøjtet
+      robot_radius: {ROBOT_RADIUS} # Dynamically injected
       plugins: ["obstacle_layer", "inflation_layer"]
 
       obstacle_layer:
@@ -166,7 +166,7 @@ local_costmap:
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
         cost_scaling_factor: 8.0
-        inflation_radius: {INFLATION_RADIUS} # 🆕 Dynamisk indsprøjtet
+        inflation_radius: {INFLATION_RADIUS} # Dynamically injected
 
 recoveries_server:
   ros__parameters:

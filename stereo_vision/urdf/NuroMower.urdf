@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <robot name="nuromower">
-  <!-- Hovedchassis (base_link) -->
+  <!-- Main chassis (base_link) -->
   <link name="base_link">
     <visual>
       <geometry>
@@ -12,11 +12,11 @@
     </visual>
   </link>
 
-  <!-- 3D Stereo Vision Kamera Joint -->
+  <!-- 3D Stereo Vision Camera Joint -->
   <joint name="camera_joint" type="fixed">
     <parent link="base_link"/>
     <child link="camera_link"/>
-    <!-- Dynamiske parametre udlæses af launch-filen og indsprøjtes her --> 🆕 [DYNAMISKE PARAMS]
+    <!-- Dynamic parameters are extracted from the launch file and injected here -->
     <origin xyz="{CAMERA_OFFSET_X} 0.0 {CAMERA_HEIGHT_Z}" rpy="0.0 {CAMERA_PITCH_Y} 0.0"/>
   </joint>
 
@@ -31,11 +31,11 @@
     </visual>
   </link>
 
-  <!-- GNSS / RTK-GPS Modtager Joint (Rover) -->
+  <!-- GNSS / RTK-GPS Receiver Joint (Rover) -->
   <joint name="gps_joint" type="fixed">
     <parent link="base_link"/>
     <child link="gps_link"/>
-    <!-- Dynamiske parametre udlæses af launch-filen og indsprøjtes her --> 🆕 [DYNAMISKE PARAMS]
+    <!-- Dynamic parameters are extracted from the launch file and injected here -->
     <origin xyz="{GPS_OFFSET_X} 0.0 {GPS_HEIGHT_Z}" rpy="0.0 0.0 0.0"/>
   </joint>
 

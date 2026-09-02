@@ -1,7 +1,7 @@
 version: '3.8'
 
 services:
-  # Stereo Vision Service (Virtual LiDAR scan-generering)
+  # Stereo Vision Service (Virtual LiDAR scan-generering fra dual MIPI CSI)
   stereo_vision:
     build:
       context: ../stereo_vision
@@ -10,11 +10,13 @@ services:
     restart: unless-stopped
     network_mode: host
     ipc: host
+    # Updated: Gives container access to both MIPI CSI video streams
     devices:
-      - /dev/video_stereo:/dev/video_stereo
+      - /dev/video0:/dev/video0
+      - /dev/video1:/dev/video1
     volumes:
       - /dev/shm:/dev/shm
-    env_file: # 🆕 [TILFØJET: Send hardware-parametre dynamisk til containeren]
+    env_file:
       - ./nuromow.env
     environment:
       - ROS_DOMAIN_ID=1
@@ -30,7 +32,7 @@ services:
     environment:
       - ROS_DOMAIN_ID=1
 
-  # RKNN NPU AI Inference (YOLOv26-seg hindringskortlægning)
+  # Updated: Qualcomm NPU AI Inference via ONNX Runtime & QNN Execution Provider
   depth_fusion:
     build:
       context: ../depth_fusion
@@ -39,13 +41,19 @@ services:
     restart: unless-stopped
     network_mode: host
     ipc: host
+    # Updated: Gives container full access to Qualcomm DSP/NPU FastRPC user channels
     devices:
-      - /dev/rknn:/dev/rknn
+      - /dev/fastrpc-adsp:/dev/fastrpc-adsp
+      - /dev/fastrpc-cdsp:/dev/fastrpc-cdsp
+      - /dev/fastrpc-cdsp-secure:/dev/fastrpc-cdsp-secure
       - /dev/dri:/dev/dri
     volumes:
       - /dev/shm:/dev/shm
       - /opt/nuromow/models:/models
       - /opt/nuromow/incoming_raw:/incoming_raw
+      - /lib/firmware:/lib/firmware:ro  # Mounts proprietary firmware blobs for Hexagon DSP
+    env_file:
+      - ./nuromow.env
     environment:
       - ROS_DOMAIN_ID=1
 

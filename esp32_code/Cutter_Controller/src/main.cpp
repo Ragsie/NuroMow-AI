@@ -15,22 +15,22 @@
 #include <std_msgs/msg/float32.h>
 
 rcl_subscription_t subscriber;
-rcl_publisher_t status_pub;                 // 🆕 [TILFØJET: ROS 2 Klipper-status udgiver]
-rcl_publisher_t rpm_pub;                    // 🆕 [TILFØJET: ROS 2 Klipper-RPM udgiver]
-rcl_publisher_t current_pub;                // 🆕 [TILFØJET: ROS 2 Klipper-strøm udgiver]
+rcl_publisher_t status_pub;                 // Added: ROS 2 Cutter status publisher
+rcl_publisher_t rpm_pub;                    // Added: ROS 2 Cutter RPM publisher
+rcl_publisher_t current_pub;                // Added: ROS 2 Cutter current publisher
 std_msgs__msg__Int32 msg_speed;
-std_msgs__msg__Int32 status_msg;            // 🆕 [TILFØJET: ROS 2 status-meddelelse]
-std_msgs__msg__Int32 rpm_msg;               // 🆕 [TILFØJET: ROS 2 RPM-meddelelse]
-std_msgs__msg__Float32 current_msg;         // 🆕 [TILFØJET: ROS 2 strøm-meddelelse]
+std_msgs__msg__Int32 status_msg;            // Added: ROS 2 status message
+std_msgs__msg__Int32 rpm_msg;               // Added: ROS 2 RPM message
+std_msgs__msg__Float32 current_msg;         // Added: ROS 2 current message
 rclc_executor_t executor;
 rclc_support_t support;
 rcl_allocator_t allocator;
 rcl_node_t node;
 
-int32_t expected_erpm = 0;                  // 🆕 [TILFØJET: Forventet kniv-ERPM]
-int32_t actual_rpm = 0;                     // 🆕 [TILFØJET: Faktisk kniv-RPM]
-float actual_current = 0.0;                 // 🆕 [TILFØJET: Faktisk kniv-strøm Ampere]
-bool cutter_blocked = false;                // 🆕 [TILFØJET: Overbelastning / Blokeret-flag]
+int32_t expected_erpm = 0;                  // Added: Expected cutter ERPM
+int32_t actual_rpm = 0;                     // Added: Actual cutter RPM
+float actual_current = 0.0;                 // Added: Actual cutter current Ampere
+bool cutter_blocked = false;                // Added: Overload / Blocked flag
 unsigned long last_status_publish = 0;
 
 void init_twai() {
@@ -43,7 +43,7 @@ void init_twai() {
     }
 }
 
-// Indstil knivens omdrejningstal (ERPM)
+// Set cutter blade revolutions (ERPM)
 void set_cutter_rpm(int32_t erpm) {
     twai_message_t message;
     message.identifier = (0x03 << 8) | VESC_CUTTER_ID; // CAN_PACKET_SET_RPM
@@ -58,10 +58,10 @@ void set_cutter_rpm(int32_t erpm) {
     twai_transmit(&message, pdMS_TO_TICKS(10));
 }
 
-// 🆕 [TILFØJET: Overvågning af VESC telemetry til status, RPM og strømmåling]
+// Monitoring VESC telemetry for status, RPM and current measurement
 void read_vesc_telemetry() {
     twai_message_t rx_msg;
-    // Læs CAN frames
+    // Read CAN frames
     while (twai_receive(&rx_msg, 0) == ESP_OK) {
         uint32_t id = rx_msg.identifier;
         uint8_t cmd = (id >> 8) & 0xFF;
@@ -72,16 +72,16 @@ void read_vesc_telemetry() {
                 int32_t rpm = (rx_msg.data[0] << 24) | (rx_msg.data[1] << 16) | (rx_msg.data[2] << 8) | rx_msg.data[3];
                 float current = ((int16_t)((rx_msg.data[4] << 8) | rx_msg.data[5])) / 10.0;
 
-                // Gem værdier til måling
-                actual_rpm = rpm / 10; // VESC rapporterer ERPM, vi dividerer med 10 (for en 10-polet motor) til reel RPM
+                // Store values for measurement
+                actual_rpm = rpm / 10; // VESC reports ERPM, we divide by 10 (for a 10-pole motor) to real RPM
                 actual_current = current;
 
-                // BLOKERINGSTEST: Hvis kniven skal køre (ERPM > 1000),
-                // men faktisk RPM er under 100 (kniven står stille/sidder fast)
-                // og strømmen samtidigt er tårnhøj (> 15.0A), så er klipperen blokeret!
+                // BLOCKING TEST: If the blade is supposed to run (ERPM > 1000),
+                // but actual RPM is below 100 (blade is stalled/stuck)
+                // and current is very high (> 15.0A), then cutter is blocked!
                 if (expected_erpm > 1000 && abs(rpm) < 100 && current > 15.0) {
                     cutter_blocked = true;
-                    set_cutter_rpm(0); // Nødstop af klipperen omgående for at skåne motor og legetøj!
+                    set_cutter_rpm(0); // Emergency stop of cutter immediately to protect motor and toys!
                     actual_rpm = 0;
                     actual_current = 0.0;
                 }
@@ -89,12 +89,12 @@ void read_vesc_telemetry() {
         }
     }
 
-    // Publicer klipperstatus, RPM og strøm til ROS 2 en gang i sekundet
+    // Publish cutter status, RPM and current to ROS 2 once per second
     unsigned long now = millis();
     if (now - last_status_publish >= 1000) {
         last_status_publish = now;
 
-        // 🆕 Udgiv status, RPM og strøm
+        // Publish status, RPM and current
         status_msg.data = cutter_blocked ? 2 : (expected_erpm > 0 ? 1 : 0);
         rpm_msg.data = actual_rpm;
         current_msg.data = actual_current;
@@ -109,8 +109,8 @@ void subscription_callback(const void * msvgin) {
     const std_msgs__msg__Int32 * msg = (const std_msgs__msg__Int32 *)msvgin;
     expected_erpm = msg->data;
 
-    // Hvis vi modtager en hastighedskommando på 0 (stop klipperen),
-    // kan vi "re-arme" systemet og fjerne blokeringsfejlen.
+    // If we receive a speed command of 0 (stop cutter),
+    // we can "re-arm" the system and remove the blocking error.
     if (expected_erpm == 0) {
         cutter_blocked = false;
     }
@@ -118,7 +118,7 @@ void subscription_callback(const void * msvgin) {
     if (!cutter_blocked) {
         set_cutter_rpm(expected_erpm);
     } else {
-        set_cutter_rpm(0); // Forbliv slukket indtil systemet nulstilles af brugeren (ved at sende 0)
+        set_cutter_rpm(0); // Remain off until system is reset by user (by sending 0)
     }
 }
 
@@ -130,7 +130,7 @@ void setup() {
     rclc_support_init(&support, 0, NULL, &allocator);
     rclc_node_init_default(&node, "cutter_controller", "", &support);
 
-    // Initialiser ROS 2 abonnement på /cutter/speed
+    // Initialize ROS 2 subscription on /cutter/speed
     rclc_subscription_init_default(
         &subscriber,
         &node,
@@ -138,7 +138,7 @@ void setup() {
         "/cutter/speed"
     );
 
-    // Initialiser ROS 2 udgiver på /cutter/status 🆕 [TILFØJET: Udgiver til klipperstatus]
+    // Initialize ROS 2 publisher on /cutter/status [Added: Publisher for cutter status]
     rclc_publisher_init_default(
         &status_pub,
         &node,
@@ -146,7 +146,7 @@ void setup() {
         "/cutter/status"
     );
 
-    // Initialiser ROS 2 udgiver på /cutter/rpm 🆕 [TILFØJET: Udgiver til klipper RPM]
+    // Initialize ROS 2 publisher on /cutter/rpm [Added: Publisher for cutter RPM]
     rclc_publisher_init_default(
         &rpm_pub,
         &node,
@@ -154,7 +154,7 @@ void setup() {
         "/cutter/rpm"
     );
 
-    // Initialiser ROS 2 udgiver på /cutter/current 🆕 [TILFØJET: Udgiver til klipper strømstyrke]
+    // Initialize ROS 2 publisher on /cutter/current [Added: Publisher for cutter current]
     rclc_publisher_init_default(
         &current_pub,
         &node,
@@ -168,6 +168,6 @@ void setup() {
 
 void loop() {
     rclc_executor_spin_some(&executor, RCL_MS_TO_NS(10));
-    read_vesc_telemetry(); // 🆕 [TILFØJET: Polling af VESC CAN statusbeskeder]
+    read_vesc_telemetry(); // Added: Polling of VESC CAN status messages
     delay(10);
 }

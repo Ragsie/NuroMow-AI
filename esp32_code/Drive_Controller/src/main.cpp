@@ -18,28 +18,28 @@
 #define BMS_RX_PIN 16
 #define BMS_TX_PIN 17
 
-// Autoro VESC-id'er på CAN-bussen
+// Autoro VESC IDs on CAN bus
 #define VESC_LEFT_ID  1
 #define VESC_RIGHT_ID 2
 
 rcl_subscription_t subscriber;
-rcl_publisher_t battery_pub;                // 🆕 [TILFØJET: ROS 2 Batteri-udgiver]
-rcl_publisher_t state_pub;                  // 🆕 [TILFØJET: ROS 2 Systemstate-udgiver]
-rcl_publisher_t cycles_pub;                 // 🆕 [TILFØJET: ROS 2 Cykler-udgiver]
-rcl_publisher_t drive_current_pub;          // 🆕 [TILFØJET: ROS 2 Drive-current udgiver]
+rcl_publisher_t battery_pub;                // Added: ROS 2 Battery publisher
+rcl_publisher_t state_pub;                  // Added: ROS 2 System state publisher
+rcl_publisher_t cycles_pub;                 // Added: ROS 2 Cycles publisher
+rcl_publisher_t drive_current_pub;          // Added: ROS 2 Drive current publisher
 geometry_msgs__msg__Twist msg_twist;
-sensor_msgs__msg__BatteryState battery_msg;  // 🆕 [TILFØJET: ROS 2 Batteri-meddelelse]
-std_msgs__msg__Int32 state_msg;             // 🆕 [TILFØJET: ROS 2 Systemstate-meddelelse]
-std_msgs__msg__Int32 cycles_msg;            // 🆕 [TILFØJET: ROS 2 Cykler-meddelelse]
-std_msgs__msg__Float32 drive_current_msg;   // 🆕 [TILFØJET: ROS 2 Drive-current meddelelse]
+sensor_msgs__msg__BatteryState battery_msg;  // Added: ROS 2 Battery message
+std_msgs__msg__Int32 state_msg;             // Added: ROS 2 System state message
+std_msgs__msg__Int32 cycles_msg;            // Added: ROS 2 Cycles message
+std_msgs__msg__Float32 drive_current_msg;   // Added: ROS 2 Drive current message
 rclc_executor_t executor;
 rclc_support_t support;
 rcl_allocator_t allocator;
 rcl_node_t node;
 
 volatile bool emergency_stop = false;
-unsigned long last_bms_request = 0;         // 🆕 [TILFØJET: BMS polling timer]
-const unsigned long BMS_INTERVAL = 1000;    // Anmod om data hvert sekund
+unsigned long last_bms_request = 0;         // Added: BMS polling timer
+const unsigned long BMS_INTERVAL = 1000;    // Request data every second
 
 int32_t expected_erpm_left = 0;
 int32_t expected_erpm_right = 0;
@@ -48,14 +48,14 @@ unsigned long last_state_publish = 0;
 float left_current = 0.0;
 float right_current = 0.0;
 
-// Hardware Interrupt: Aktiveres øjeblikkeligt ved fysisk kollision eller STOP-knap
+// Hardware Interrupt: Activated immediately on physical collision or STOP button
 void IRAM_ATTR handleBumper() {
     emergency_stop = true;
-    digitalWrite(RELAY_PIN, LOW); // Afbryd strømmen til 40A bilrelæet med det samme!
-    twai_stop();                 // Luk CAN-bussen for at hindre enhver motorrotation
+    digitalWrite(RELAY_PIN, LOW); // Disconnect power to 40A car relay immediately!
+    twai_stop();                 // Close CAN bus to prevent any motor rotation
 }
 
-// Initialiser TWAI driver ved 500 kbps
+// Initialize TWAI driver at 500 kbps
 void init_twai() {
     twai_general_config_t g_config = TWAI_GENERAL_CONFIG_DEFAULT(CAN_TX_PIN, CAN_RX_PIN, TWAI_MODE_NORMAL);
     twai_timing_config_t t_config = TWAI_TIMING_CONFIG_500KBITS();
@@ -63,13 +63,13 @@ void init_twai() {
 
     if (twai_driver_install(&g_config, &t_config, &f_config) == ESP_OK) {
         twai_start();
-        Serial.println("TWAI (CAN) Driver installeret og startet.");
+        Serial.println("TWAI (CAN) Driver installed and started.");
     } else {
-        Serial.println("Kunne ikke installere TWAI-driveren.");
+        Serial.println("Could not install TWAI driver.");
     }
 }
 
-// Send ERPM-kommando til VESC over CAN med extended frames (VESC specifik protokol)
+// Send ERPM command to VESC over CAN with extended frames (VESC specific protocol)
 void send_vesc_erpm(uint8_t controller_id, int32_t erpm) {
     if (emergency_stop) return;
 
@@ -86,7 +86,7 @@ void send_vesc_erpm(uint8_t controller_id, int32_t erpm) {
     twai_transmit(&message, pdMS_TO_TICKS(10));
 }
 
-// 🆕 [OPDATERET: Forespørg Daly BMS data dynamisk med checksum-beregning]
+// Updated: Query Daly BMS data dynamically with checksum calculation
 void request_bms_data(uint8_t cmd_type) {
     uint8_t cmd[13] = {0xA5, 0x40, cmd_type, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
     uint8_t checksum = 0;
@@ -97,7 +97,7 @@ void request_bms_data(uint8_t cmd_type) {
     Serial2.write(cmd, 13);
 }
 
-// 🆕 [OPDATERET: Læs og dekoder modtagne UART-pakker fra Daly BMS (inkl. 0x90, 0x91, og 0x92)]
+// Updated: Read and decode received UART packets from Daly BMS (incl. 0x90, 0x91, and 0x92)
 void read_bms_data() {
     if (Serial2.available() >= 13) {
         while (Serial2.available() >= 13 && Serial2.peek() != 0xA5) {
@@ -116,7 +116,7 @@ void read_bms_data() {
 
         if (checksum == buffer[12]) {
             if (buffer[1] == 0x80) {
-                if (buffer[2] == 0x90) { // Spænding, strøm, SOC
+                if (buffer[2] == 0x90) { // Voltage, current, SOC
                     float voltage = ((buffer[4] << 8) | buffer[5]) / 10.0;
                     float current = (((buffer[8] << 8) | buffer[9]) - 30000) / 10.0;
                     float soc = ((buffer[10] << 8) | buffer[11]) / 10.0;
@@ -127,12 +127,12 @@ void read_bms_data() {
                     battery_msg.present = true;
                     rcl_publish(&battery_pub, &battery_msg, NULL);
                 }
-                else if (buffer[2] == 0x91) { // 🆕 Opladningscykler
+                else if (buffer[2] == 0x91) { // Charge cycles
                     uint16_t cycles = (buffer[8] << 8) | buffer[9];
                     cycles_msg.data = cycles;
                     rcl_publish(&cycles_pub, &cycles_msg, NULL);
                 }
-                else if (buffer[2] == 0x92) { // 🆕 Maksimal temperatur
+                else if (buffer[2] == 0x92) { // Maximum temperature
                     int8_t max_temp = buffer[4] - 40; // 40 °C offset
                     battery_msg.temperature = max_temp;
                     battery_msg.present = true;
@@ -143,7 +143,7 @@ void read_bms_data() {
     }
 }
 
-// Callback-funktion for ROS 2 Twist (/cmd_vel)
+// Callback function for ROS 2 Twist (/cmd_vel)
 void subscription_callback(const void * msvgin) {
     const geometry_msgs__msg__Twist * msg = (const geometry_msgs__msg__Twist *)msvgin;
 
@@ -176,7 +176,7 @@ void subscription_callback(const void * msvgin) {
     }
 }
 
-// 🆕 [TILFØJET: Læs VESC feedback, overvåg hjulstrøm, og find ud af om motoren er fastklemt]
+// Added: Read VESC feedback, monitor wheel current, and determine if motor is stalled
 void read_drive_telemetry() {
     twai_message_t rx_msg;
     while (twai_receive(&rx_msg, 0) == ESP_OK) {
@@ -207,16 +207,16 @@ void read_drive_telemetry() {
     if (now - last_state_publish >= 1000) {
         last_state_publish = now;
 
-        // Publicer samlet kørehjul-strøm
+        // Publish total wheel current
         drive_current_msg.data = left_current + right_current;
         rcl_publish(&drive_current_pub, &drive_current_msg, NULL);
 
         if (emergency_stop) {
-            state_msg.data = 5; // NØDSTOP / BUMPER
+            state_msg.data = 5; // EMERGENCY STOP / BUMPER
         } else if (drive_stuck) {
             state_msg.data = 4; // STUCK
         } else if (abs(expected_erpm_left) > 0 || abs(expected_erpm_right) > 0) {
-            state_msg.data = 1; // KLIPPER / KØRER
+            state_msg.data = 1; // CUTTING / RUNNING
         } else {
             state_msg.data = 0; // STOP
         }
@@ -227,9 +227,9 @@ void read_drive_telemetry() {
 void setup() {
     Serial.begin(115200);
 
-    // Konfigurer Daly BMS UART (Serial2)
+    // Configure Daly BMS UART (Serial2)
     Serial2.begin(9600, SERIAL_8N1, BMS_RX_PIN, BMS_TX_PIN);
-    Serial.println("Daly Smart BMS UART2 (9600 baud) startet.");
+    Serial.println("Daly Smart BMS UART2 (9600 baud) started.");
 
     pinMode(BUMPER_PIN, INPUT_PULLUP);
     pinMode(RELAY_PIN, OUTPUT);
@@ -287,7 +287,7 @@ void loop() {
     if (!emergency_stop) {
         rclc_executor_spin_some(&executor, RCL_MS_TO_NS(10));
 
-        // 🆕 [OPDATERET: 3-vejs BMS polling rotation: 0x90 (status), 0x91 (cykler), 0x92 (temperatur)]
+        // Updated: 3-way BMS polling rotation: 0x90 (status), 0x91 (cycles), 0x92 (temperature)
         unsigned long now = millis();
         if (now - last_bms_request >= BMS_INTERVAL) {
             last_bms_request = now;

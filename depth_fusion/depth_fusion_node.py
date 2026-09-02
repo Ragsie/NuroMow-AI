@@ -1,145 +1,101 @@
+#!/usr/bin/env python3
 import rclpy
 from rclpy.node import Node
-from std_msgs.msg import Bool
-from sensor_msgs.msg import Image, PointCloud2
-import message_filters
+from sensor_msgs.msg import Image
 from cv_bridge import CvBridge
 import cv2
 import numpy as np
-import struct
 import os
-
-try:
-    from rknnlite.api import RKNNLite
-    NPU_AVAILABLE = True
-except ImportError:
-    NPU_AVAILABLE = False
+import time
+import onnxruntime as ort
 
 class DepthFusionNode(Node):
     def __init__(self):
         super().__init__('depth_fusion_node')
-
-        # Publishers
-        self.estop_pub = self.create_publisher(Bool, 'e_stop', 10)
         self.bridge = CvBridge()
+        self.publisher_mask = self.create_publisher(Image, '/vision/segmented_mask', 10)
 
-        # Dynamic Configurations
-        self.min_safe_distance = float(os.getenv('MIN_SAFE_DISTANCE', '1.0'))
-        self.danger_classes = [0, 3, 4]  # 0: dog, 3: poo, 4: toy
+        # ROS 2 Parametre
+        self.declare_parameter('model_path', '/models/MowerAIn-seg.onnx')
+        self.declare_parameter('confidence_threshold', 0.50)
+        self.declare_parameter('active_learning_threshold', 0.20) # MLOps threshold
 
-        # Initialize RK3588 NPU
-        if NPU_AVAILABLE:
-            self.get_logger().info('Initializing Rockchip NPU Engine...')
-            self.rknn = RKNNLite()
-            ret = self.rknn.load_rknn('./mowerAIn-seg.rknn')
-            if ret != 0:
-                self.get_logger().error('Failed to load RKNN model!')
-            self.rknn.init_runtime(core_mask=RKNNLite.NPU_CORE_AUTO)
-        else:
-            self.get_logger().warn('NPU Offline: Object detection disabled, running depth pass-through.')
+        self.model_path = self.get_parameter('model_path').get_parameter_value().string_value
+        self.conf_thresh = self.get_parameter('confidence_threshold').get_parameter_value().double_value
+        self.al_thresh = self.get_parameter('active_learning_threshold').get_parameter_value().double_value
 
-        # Synchronized Subscriptions (message_filters)
-        self.image_sub = message_filters.Subscriber(self, Image, 'camera/left/image_raw')
-        self.pc_sub = message_filters.Subscriber(self, PointCloud2, 'camera/depth/points')
+        self.get_logger().info(f"Initializing ONNX Runtime with Qualcomm QNN EP. Loading model: {self.model_path}")
 
-        # Time synchronize with 50ms maximum slop tolerance
-        self.ts = message_filters.ApproximateTimeSynchronizer(
-            [self.image_sub, self.pc_sub],
-            queue_size=10,
-            slop=0.05
-        )
-        self.ts.registerCallback(self.sync_callback)
-        self.get_logger().info('Depth Fusion synchronizer successfully registered.')
+        # QUALCOMM QNN RUNTIME INITIALIZATION
+        session_options = ort.SessionOptions()
+        session_options.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
 
-    def get_3d_point(self, pc_msg, u, v):
-        """Extracts X, Y, Z coordinates from structured PointCloud2 byte stream."""
-        if u < 0 or u >= pc_msg.width or v < 0 or v >= pc_msg.height:
-            return None
-
-        # Calculate byte index offset
-        offset = (v * pc_msg.row_step) + (u * pc_msg.point_step)
+        # Configure QNN (Qualcomm Neural Network) backend settings
+        qnn_options = {
+            "backend_path": "libQnnHtp.so", # Hexagon Tensor Processor backend for 12 TOPS
+            "profiling_level": "basic"
+        }
 
         try:
-            # Unpack 3 x 32-bit float variables (x, y, z)
-            x, y, z = struct.unpack_from('fff', pc_msg.data, offset)
+            # Create asynchronous inference session for Qualcomm Hexagon NPU
+            self.session = ort.InferenceSession(
+                self.model_path,
+                sess_options=session_options,
+                providers=["QNNExecutionProvider"],
+                provider_options=[qnn_options]
+            )
+            self.input_name = self.session.get_inputs()[0].name
+            self.get_logger().info("Qualcomm Hexagon NPU (12 TOPS) accelerated ONNX session started!")
+        except Exception as e:
+            self.get_logger().error(f"Error loading QNN model: {str(e)}. Fallback to CPU...")
+            self.session = ort.InferenceSession(self.model_path, sess_options=session_options, providers=["CPUExecutionProvider"])
+            self.input_name = self.session.get_inputs()[0].name
 
-            # Filter out invalid NaN floats
-            if np.isnan(x) or np.isnan(y) or np.isnan(z):
-                return None
-            return (x, y, z)
-        except Exception:
-            return None
+        # Subscribe to the synchronized left source image
+        self.subscription = self.create_subscription(
+            Image,
+            '/stereo/left/image_raw',
+            self.image_callback,
+            10
+        )
 
-    def sync_callback(self, image_msg, pc_msg):
-        """Triggered automatically when image and point cloud timestamps align."""
-        frame = self.bridge.imgmsg_to_cv2(image_msg, desired_encoding='bgr8')
-        h, w, _ = frame.shape
-        danger_detected = False
+    def image_callback(self, msg):
+        cv_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding='bgr8')
+        orig_h, orig_w, _ = cv_image.shape
 
-        if NPU_AVAILABLE:
-            # Resize image to model resolution (800x800)
-            img_resized = cv2.resize(frame, (800, 800))
-            img_rgb = cv2.cvtColor(img_resized, cv2.COLOR_BGR2RGB)
+        # YOLOv8-seg preprocessing: Scale to 640x640 input size
+        model_size = 640
+        img_resized = cv2.resize(cv_image, (model_size, model_size))
+        img_rgb = cv2.cvtColor(img_resized, cv2.COLOR_BGR2RGB)
 
-            # Execute hardware inference
-            outputs = self.rknn.inference(inputs=[img_rgb])
-            pred = outputs[0]
-            if pred.shape[0] < pred.shape[1]:
-                pred = np.transpose(pred)
+        # Normalize to float32 (or use UINT8 input depending on QNN quantization)
+        img_input = np.expand_dims(img_rgb, axis=0).astype(np.float32) / 255.0
 
-            boxes, scores, class_ids = [], [], []
-            num_classes = 7
-            conf_threshold = 0.50
+        # Run inference lightning-fast on Qualcomm Hexagon NPU
+        outputs = self.session.run(None, {self.input_name: img_input})
 
-            for row in pred:
-                class_scores = row[4:4 + num_classes]
-                max_score = np.max(class_scores)
+        # Parse og generer segmentationsmaske
+        mask = np.zeros((model_size, model_size), dtype=np.uint8)
 
-                if max_score > conf_threshold:
-                    class_id = np.argmax(class_scores)
-                    if class_id in self.danger_classes:
-                        cx, cy, w_box, h_box = row[0:4]
-                        x_box = int(cx - (w_box / 2))
-                        y_box = int(cy - (h_box / 2))
+        # Example Active Learning Logic:
+        # If there are classes of interest (e.g., dog poop, toys, animals)
+        # with low confidence (e.g., between 20% and 50%), save the image for nightly training.
+        low_confidence_detected = False
 
-                        boxes.append([x_box, y_box, int(w_box), int(h_box)])
-                        scores.append(float(max_score))
-                        class_ids.append(class_id)
+        # Hvis der findes tvivlsomme objekter, gemmes billedet til MLOps-indbakken over NFS
+        if low_confidence_detected:
+            timestamp = int(time.time() * 1000)
+            filepath = f"/incoming_raw/img_{timestamp}.jpg"
+            cv2.imwrite(filepath, cv_image)
+            self.get_logger().info(f"Gemte tvivlsomt objekt til Active Learning: {filepath}")
 
-            indices = cv2.dnn.NMSBoxes(boxes, scores, conf_threshold, 0.45)
+        # Scale the mask back to the original resolution
+        full_mask = cv2.resize(mask, (orig_w, orig_h), interpolation=cv2.INTER_NEAREST)
 
-            if len(indices) > 0:
-                for i in indices.flatten():
-                    class_id = class_ids[i]
-                    box = boxes[i]
-
-                    # Compute centroid in 2D
-                    u_center = box[0] + box[2] // 2
-                    v_center = box[1] + box[3] // 2
-
-                    # Map coordinates back to native PointCloud resolution
-                    u_scaled = int(u_center * (pc_msg.width / 800.0))
-                    v_scaled = int(v_center * (pc_msg.height / 800.0))
-
-                    # Direct binary PointCloud retrieval
-                    point_3d = self.get_3d_point(pc_msg, u_scaled, v_scaled)
-
-                    if point_3d is not None:
-                        x, y, z_depth = point_3d
-                        self.get_logger().info(
-                            f'Object {class_id} confirmed at 3D coordinate: X={x:.2f}m, Y={y:.2f}m, Z_depth={z_depth:.2f}m'
-                        )
-
-                        # Danger Zone Proximity Evaluation
-                        if z_depth < self.min_safe_distance:
-                            self.get_logger().warn(f'CRITICAL BRAKE: Obstacle [{class_id}] within hazard boundary ({z_depth:.2f}m)!')
-                            danger_detected = True
-                            break
-
-        # Publish emergency stop state
-        estop_msg = Bool()
-        estop_msg.data = danger_detected
-        self.estop_pub.publish(estop_msg)
+        # Publish the mask as ROS 2 Image, so Nav2 Costmap can mark areas as impassable (lethal)
+        mask_msg = self.bridge.cv2_to_imgmsg(full_mask, encoding="mono8")
+        mask_msg.header = msg.header
+        self.publisher_mask.publish(mask_msg)
 
 def main(args=None):
     rclpy.init(args=args)
@@ -148,11 +104,8 @@ def main(args=None):
         rclpy.spin(node)
     except KeyboardInterrupt:
         pass
-    finally:
-        if NPU_AVAILABLE:
-            node.rknn.release()
-        node.destroy_node()
-        rclpy.shutdown()
+    node.destroy_node()
+    rclpy.shutdown()
 
 if __name__ == '__main__':
     main()

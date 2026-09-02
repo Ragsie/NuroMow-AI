@@ -13,16 +13,18 @@ class StereoNode(Node):
         self.publisher_depth = self.create_publisher(Image, '/stereo/depth_image', 10)
         self.bridge = CvBridge()
 
-        # ROS 2 Parametre med standardværdier (Arves dynamisk fra nuromow.env via launch) 🆕 [DYNAMISKE PARAMETRE]
-        self.declare_parameter('video_device', '/dev/video_stereo')
+        # ROS 2 Parameters with default values (Inherited dynamically from nuromow.env via launch) [UPDATED FOR DUAL-CSI]
+        self.declare_parameter('video_device_left', '/dev/video0')
+        self.declare_parameter('video_device_right', '/dev/video1')
         self.declare_parameter('frame_id', 'camera_link')
-        self.declare_parameter('baseline', 0.06)          # GXIVISION 60 mm baseline
-        self.declare_parameter('focal_length', 350.0)      # Brændvidde i pixels
-        self.declare_parameter('camera_height_z', 0.10)    # Monteringshøjde over jorden (meter)
-        self.declare_parameter('camera_offset_x', 0.25)    # Fremadrettet afstand fra base_link rotationscentrum (meter)
-        self.declare_parameter('camera_pitch_y', 0.0)      # Hældningsvinkel i radianer (0.0 = vandret, positive = nedad)
+        self.declare_parameter('baseline', 0.06)          # IMX219 Binocular standard baseline is 60mm
+        self.declare_parameter('focal_length', 350.0)      # Focal length in pixels
+        self.declare_parameter('camera_height_z', 0.10)    # Mounting height above ground (meters)
+        self.declare_parameter('camera_offset_x', 0.25)    # Forward distance from base_link rotation center (meters)
+        self.declare_parameter('camera_pitch_y', 0.0)      # Pitch angle in radians (0.0 = horizontal, positive = downward)
 
-        device = self.get_parameter('video_device').get_parameter_value().string_value
+        device_l = self.get_parameter('video_device_left').get_parameter_value().string_value
+        device_r = self.get_parameter('video_device_right').get_parameter_value().string_value
         self.frame_id = self.get_parameter('frame_id').get_parameter_value().string_value
         self.baseline = self.get_parameter('baseline').get_parameter_value().double_value
         self.focal_length = self.get_parameter('focal_length').get_parameter_value().double_value
@@ -30,30 +32,37 @@ class StereoNode(Node):
         self.camera_offset_x = self.get_parameter('camera_offset_x').get_parameter_value().double_value
         self.camera_pitch_y = self.get_parameter('camera_pitch_y').get_parameter_value().double_value
 
-        self.cap = cv2.VideoCapture(device)
-        if not self.cap.isOpened():
-            self.get_logger().error(f"Kunne ikke åbne stereokameraet: {device}")
+        # Open both MIPI CSI video devices in V4L2 mode
+        self.cap_left = cv2.VideoCapture(device_l, cv2.CAP_V4L2)
+        self.cap_right = cv2.VideoCapture(device_r, cv2.CAP_V4L2)
+
+        if not self.cap_left.isOpened() or not self.cap_right.isOpened():
+            self.get_logger().error(f"Could not open dual MIPI CSI cameras: {device_l} & {device_r}")
             return
 
-        self.get_logger().info(f"Stereo Node startet. Baseline={self.baseline}m, FocalLength={self.focal_length}px, Height={self.camera_height_z}m, Pitch={self.camera_pitch_y}rad")
+        self.get_logger().info(f"MIPI CSI Stereo Node started. Baseline={self.baseline}m, FocalLength={self.focal_length}px")
         self.timer = self.create_timer(0.05, self.process_frame) # 20 FPS (50ms)
 
     def process_frame(self):
-        ret, frame = self.cap.read()
-        if not ret:
-            self.get_logger().warn("Kunne ikke læse billede fra kameraet.")
+        # IMPROVED SYNCHRONIZATION: Use grab() and then retrieve() to fetch frames lightning-fast in hardware
+        if not (self.cap_left.grab() and self.cap_right.grab()):
+            self.get_logger().warn("Could not synchronize/grab frames from MIPI CSI.")
             return
 
-        # Opdel side-by-side stereobillede (Venstre & Højre strøm)
-        h, w, _ = frame.shape
-        left_img = frame[0:h, 0:w//2]
-        right_img = frame[0:h, w//2:w]
+        ret_l, left_img = self.cap_left.retrieve()
+        ret_r, right_img = self.cap_right.retrieve()
 
-        # Konverter til gråtoner (Grayscale)
+        if not (ret_l and ret_r):
+            self.get_logger().warn("Could not decode image frames from MIPI CSI.")
+            return
+
+        h, w, _ = left_img.shape
+
+        # Convert to grayscale (Grayscale)
         gray_left = cv2.cvtColor(left_img, cv2.COLOR_BGR2GRAY)
         gray_right = cv2.cvtColor(right_img, cv2.COLOR_BGR2GRAY)
 
-        # Beregn stereodisparitet med OpenCV StereoSGBM (Semi-Global Block Matching)
+        # Calculate stereo disparity with OpenCV StereoSGBM (Semi-Global Block Matching)
         stereo = cv2.StereoSGBM_create(
             minDisparity=0,
             numDisparities=64,
@@ -67,7 +76,7 @@ class StereoNode(Node):
         )
         disparity = stereo.compute(gray_left, gray_right).astype(np.float32) / 16.0
 
-        # Undgå division med nul og beregn dybdekort: Z = (focal_length * baseline) / disparity
+        # Avoid division by zero and calculate depth map: Z = (focal_length * baseline) / disparity
         disparity[disparity <= 0] = 0.1
         depth_map = (self.focal_length * self.baseline) / disparity
 
@@ -78,70 +87,66 @@ class StereoNode(Node):
         self.publisher_depth.publish(depth_msg)
 
         # ==========================================
-        #  3D VIRTUAL LIDAR-ALGORITME MED PITCH-KOMPENSERING 🆕 [HELT OMSKREVET: Modulær 3D-til-2D projektion og højde-filtrering]
+        #  3D VIRTUAL LIDAR ALGORITHM WITH PITCH COMPENSATION
         # ==========================================
-        # Downsample-grid for at opretholde 20 FPS på Orange Pi (CPU-venlig, men tæt nok til forhindringer)
+        # Downsample grid to maintain 20 FPS (Kryo architecture handles this effortlessly)
         step = 4
-        rows = np.arange(h // 4, h - 10, step) # Udeluk himmel og helt tæt kofanger
-        cols = np.arange(0, w // 2, step)
+        rows = np.arange(h // 4, h - 10, step) # Exclude sky and very close bumper
+        cols = np.arange(0, w, step)           # No splitting of w now, since left_img is the full left image!
         v_grid, u_grid = np.meshgrid(rows, cols, indexing='ij')
 
-        # Hent dybdeværdier
+        # Retrieve depth values
         z_c = depth_map[v_grid, u_grid]
 
-        # Validitetsmaske for dybde (arbejdsområde: 0.15m til 4.0m)
+        # Validity mask for depth (working area: 0.15m to 4.0m)
         valid_mask = (z_c > 0.15) & (z_c < 4.0)
 
         if not np.any(valid_mask):
-            # Ingen gyldige dybdemålinger; publicer tomt scan for at undgå at hænge
-            self.publish_empty_scan(w // 2)
+            self.publish_empty_scan(w)
             return
 
         z_c = z_c[valid_mask]
         v_coords = v_grid[valid_mask]
         u_coords = u_grid[valid_mask]
 
-        # Kameraets optiske center
-        cx = (w // 2) / 2.0
+        # Camera's optical center
+        cx = w / 2.0
         cy = h / 2.0
 
-        # Beregn 3D punkter i kameraets eget koordinatsystem (Standard ROS Camera frame: Z=frem, X=højre, Y=ned)
+        # Calculate 3D points in the camera's own coordinate system (Standard ROS Camera frame: Z=forward, X=right, Y=down)
         x_c = (u_coords - cx) * z_c / self.focal_length
         y_c = (v_coords - cy) * z_c / self.focal_length
 
-        # Trigonometrisk rotation (pitch-kompensation) og translation til base_link (robottens rotationscentrum på jorden)
+        # Trigonometric rotation (pitch compensation) and translation to base_link (robot's center of rotation on the ground)
         theta = self.camera_pitch_y
         cos_t = np.cos(theta)
         sin_t = np.sin(theta)
 
-        # 3D transformation til robot-koordinater:
-        # X_r: Afstand fremad fra robottens rotationscentrum (base_link)
-        # Y_r: Afstand til venstre (venstre er positiv, højre er negativ)
-        # Z_r: Højde over jorden (base_link jordsniveau er 0.0)
+        # 3D transformation to robot coordinates:
         X_r = z_c * cos_t - y_c * sin_t + self.camera_offset_x
         Y_r = -x_c
         Z_r = -y_c * cos_t - z_c * sin_t + self.camera_height_z
 
-        # HINDRINGS-FILTRERING:
-        # Vi filtrerer græsset og fliserne fra ved kun at betragte punkter, der rager op over græshøjde (fx >= 5 cm),
-        # men som er lavere end robottens fysiske krop (fx <= 45 cm) for at ignorere grene over robotten.
+        # OBSTACLE FILTERING:
+        # We filter grass and tiles by only considering points that rise above grass height (e.g., >= 5 cm),
+        # but are lower than the robot's physical body (e.g., <= 45 cm) to ignore branches above the robot.
         obstacle_mask = (Z_r >= 0.05) & (Z_r <= 0.45) & (X_r > 0.1) & (X_r < 4.0)
 
         X_obs = X_r[obstacle_mask]
         Y_obs = Y_r[obstacle_mask]
 
-        # Konverter de registrerede hindringspunkter til 2D-polære koordinater (Afstand R og Vinkel alpha)
+        # Convert recorded obstacle points to 2D polar coordinates (Distance R and Angle alpha)
         R_obs = np.sqrt(X_obs**2 + Y_obs**2)
         alpha_obs = np.arctan2(Y_obs, X_obs)
 
-        # Opret standardiseret LaserScan-meddelelse til Nav2
+        # Create standardized LaserScan message for Nav2
         scan = LaserScan()
         scan.header.stamp = self.get_clock().now().to_msg()
         scan.header.frame_id = self.frame_id
 
-        # Kameraets vandrette FOV er ca. 90 grader (1.5708 radianer)
-        fov_rad = 1.5708
-        num_readings = w // 2
+        # Camera's horizontal FOV is approximately 83 degrees (1.4486 radians) for IMX219-83
+        fov_rad = 1.4486
+        num_readings = w
         scan.angle_min = -fov_rad / 2.0
         scan.angle_max = fov_rad / 2.0
         scan.angle_increment = fov_rad / num_readings
@@ -150,23 +155,23 @@ class StereoNode(Node):
         scan.range_min = 0.15
         scan.range_max = 4.0
 
-        # Initialiser alle målinger med uendelig afstand (betyder ingen hindring registreret i den retning)
+        # Initialize all measurements with infinite distance
         scan_ranges = np.full(num_readings, float('inf'))
 
         # Find bin-indeks for hvert hindringspunkt
         bin_indices = ((alpha_obs - scan.angle_min) / scan.angle_increment).astype(int)
 
-        # Sørg for at indeks holdes inden for arrayets grænser (mellem -45 og +45 grader)
+        # Ensure that indices stay within array bounds
         valid_bins = (bin_indices >= 0) & (bin_indices < num_readings)
         bin_indices = bin_indices[valid_bins]
         R_obs = R_obs[valid_bins]
 
-        # For hvert vinkel-bin skal vi kun gemme den mindste afstand (det tætteste objekt)
+        # For each angle bin, we only store the smallest distance (the closest object)
         for idx, r in zip(bin_indices, R_obs):
             if r < scan_ranges[idx]:
                 scan_ranges[idx] = r
 
-        # Erstat eventuelle resterende uendelig-værdier med NaN (standard i ROS til "intet objekt fundet")
+        # Replace any remaining infinite values with NaN (standard in ROS for "no object found")
         scan.ranges = np.where(np.isinf(scan_ranges), float('nan'), scan_ranges).tolist()
 
         self.publisher_scan.publish(scan)
@@ -175,7 +180,7 @@ class StereoNode(Node):
         scan = LaserScan()
         scan.header.stamp = self.get_clock().now().to_msg()
         scan.header.frame_id = self.frame_id
-        fov_rad = 1.5708
+        fov_rad = 1.4486
         scan.angle_min = -fov_rad / 2.0
         scan.angle_max = fov_rad / 2.0
         scan.angle_increment = fov_rad / num_readings

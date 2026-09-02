@@ -5,7 +5,7 @@ import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import NavSatFix, BatteryState
 from std_msgs.msg import Int32, Float32
-from nav_msgs.msg import Odometry  # 🆕 [TILFØJET: Til kilometertæller]
+from nav_msgs.msg import Odometry  # Added: For odometer
 import threading
 import json
 import asyncio
@@ -27,25 +27,25 @@ class BackendROSNode(Node):
         self.drive_current_sub = self.create_subscription(Float32, '/drive/current', self.drive_current_callback, 10)
         self.cutter_rpm_sub = self.create_subscription(Int32, '/cutter/rpm', self.cutter_rpm_callback, 10)
 
-        # 🆕 [TILFØJET: Nye abonnenter til kilometertæller, GPS-satellitter og BMS-opladsningscykler]
+        # Added: New subscribers for odometer, GPS satellites and BMS charge cycles
         self.odom_sub = self.create_subscription(Odometry, '/odom', self.odom_callback, 10)
         self.satellites_sub = self.create_subscription(Int32, '/gps/satellites', self.satellites_callback, 10)
         self.charge_cycles_sub = self.create_subscription(Int32, '/battery/charge_cycles', self.charge_cycles_callback, 10)
 
-        self.gps_data = {"lat": 0.0, "lon": 0.0, "status": "Intet GPS Signal", "rtk_code": 0, "rtk_text": "Intet GPS Signal", "satellites": 0}
+        self.gps_data = {"lat": 0.0, "lon": 0.0, "status": "No GPS Signal", "rtk_code": 0, "rtk_text": "No GPS Signal", "satellites": 0}
         self.battery_v = 24.0
         self.battery_pct = 100.0
         self.battery_current = 0.0
         self.battery_temp = 25.0
-        self.state = 0 # 0=STOP, 1=KLIPPER, 2=SØGER DOCK, 3=OPLADER, 4=STUCK, 5=NØDSTOP, 6=CUTTER_BLOKERET, 7=SØGER GRÆSKANT
-        self.cutter_status = 0 # 0=OFF, 1=OK, 2=BLOKERET
+        self.state = 0 # 0=STOP, 1=CUTTER, 2=SEEKING DOCK, 3=CHARGING, 4=STUCK, 5=EMERGENCY STOP, 6=CUTTER_BLOCKED, 7=SEEKING GRASS EDGE
+        self.cutter_status = 0 # 0=OFF, 1=OK, 2=BLOCKED
         self.cutter_current = 0.0
         self.drive_current = 0.0
         self.cutter_rpm = 0
         self.satellites_count = 0
         self.charge_cycles = 0
 
-        # 🆕 [TILFØJET: Persistent statistik indlæst fra Orange Pi NVMe SSD]
+        # Added: Persistent statistics loaded from Orange Pi NVMe SSD
         self.stats_file = "/opt/nuromow/stats.json"
         self.total_distance_km = 0.0
         self.total_runtime_hours = 0.0
@@ -56,12 +56,12 @@ class BackendROSNode(Node):
         self.last_stats_save_time = time.time()
         self.last_runtime_tick = time.time()
 
-        # CPU overvågning
+        # CPU monitoring
         self.last_cpu_idle = 0
         self.last_cpu_total = 0
 
     def load_stats(self):
-        # 🆕 [TILFØJET: Indlæs kilometertæller og runtime persistent]
+        # Added: Load odometer and runtime persistent
         if os.path.exists(self.stats_file):
             try:
                 with open(self.stats_file, 'r') as f:
@@ -69,12 +69,12 @@ class BackendROSNode(Node):
                     self.total_distance_km = data.get("total_distance_km", 0.0)
                     self.total_runtime_hours = data.get("total_runtime_hours", 0.0)
             except Exception as e:
-                self.get_logger().error(f"Kunne ikke læse stats-fil: {e}")
+                self.get_logger().error(f"Could not read stats file: {e}")
         else:
             self.save_stats()
 
     def save_stats(self):
-        # 🆕 [TILFØJET: Gem stats persistent i JSON-fil]
+        # Added: Save stats persistent in JSON file
         try:
             os.makedirs(os.path.dirname(self.stats_file), exist_ok=True)
             with open(self.stats_file, 'w') as f:
@@ -83,16 +83,16 @@ class BackendROSNode(Node):
                     "total_runtime_hours": round(self.total_runtime_hours, 4)
                 }, f)
         except Exception as e:
-            self.get_logger().error(f"Kunne ikke gemme stats-fil: {e}")
+            self.get_logger().error(f"Could not save stats file: {e}")
 
     def odom_callback(self, msg):
-        # 🆕 [TILFØJET: Beregn euklidisk distance kørt fra hjulenkodere og odom-træet]
+        # Added: Calculate Euclidean distance traveled from wheel encoders and odom tree
         x = msg.pose.pose.position.x
         y = msg.pose.pose.position.y
 
         if self.last_x is not None and self.last_y is not None:
             dist_m = math.sqrt((x - self.last_x)**2 + (y - self.last_y)**2)
-            if dist_m < 5.0: # Sikkerhedstærskel mod hop ved odom nulstilling
+            if dist_m < 5.0: # Safety threshold against jump during odom reset
                 self.total_distance_km += dist_m / 1000.0
 
         self.last_x = x
@@ -100,12 +100,12 @@ class BackendROSNode(Node):
         self.update_runtime_and_save()
 
     def update_runtime_and_save(self):
-        # 🆕 [TILFØJET: Opdater driftstimer hvis maskinen kører, og gem til disk hvert 10. sekund]
+        # Added: Update runtime hours if machine is running, and save to disk every 10 seconds
         now = time.time()
         dt = now - self.last_runtime_tick
         self.last_runtime_tick = now
 
-        if self.state in [1, 2, 7]: # Aktivt arbejdende tilstande
+        if self.state in [1, 2, 7]: # Active working states
             self.total_runtime_hours += dt / 3600.0
 
         if now - self.last_stats_save_time >= 10.0:
@@ -114,32 +114,32 @@ class BackendROSNode(Node):
             self.broadcast_status()
 
     def satellites_callback(self, msg):
-        # 🆕 [TILFØJET: Modtag låst satellit-antal fra Quectel LC29H GPS]
+        # Added: Receive locked satellite count from Quectel LC29H GPS
         self.satellites_count = msg.data
         self.gps_data["satellites"] = self.satellites_count
         self.broadcast_status()
 
     def charge_cycles_callback(self, msg):
-        # 🆕 [TILFØJET: Modtag akkumulerede opladningscykler fra Daly BMS via ESP32]
+        # Added: Receive accumulated charge cycles from Daly BMS via ESP32
         self.charge_cycles = msg.data
         self.broadcast_status()
 
     def gps_callback(self, msg):
         status_code = msg.status.status
-        # Konverter RTK/GPS status til dansk tekst og kode til appen
-        rtk_text = "Intet GPS Signal"
+        # Convert RTK/GPS status to English text and code to app
+        rtk_text = "No GPS Signal"
         if status_code == 0:
-            rtk_text = "Standard GPS Fix (Groft)"
+            rtk_text = "Standard GPS Fix (Coarse)"
         elif status_code == 1:
-            rtk_text = "RTK Float (Søger præcision)"
+            rtk_text = "RTK Float (Seeking precision)"
         elif status_code == 2:
-            rtk_text = "RTK Centimeter-Fix (Perfekt)"
+            rtk_text = "RTK Centimeter-Fix (Perfect)"
 
         self.gps_data = {
             "lat": msg.latitude,
             "lon": msg.longitude,
             "status": rtk_text,
-            "rtk_code": status_code + 1 if status_code >= 0 else 0, # Omdan til 0=No fix, 1=GPS, 2=Float, 3=Fix
+            "rtk_code": status_code + 1 if status_code >= 0 else 0, # Convert to 0=No fix, 1=GPS, 2=Float, 3=Fix
             "rtk_text": rtk_text,
             "satellites": self.satellites_count
         }
@@ -159,7 +159,7 @@ class BackendROSNode(Node):
     def cutter_status_callback(self, msg):
         self.cutter_status = msg.data
         if self.cutter_status == 2:
-            self.state = 6 # CUTTER_BLOKERET systemstate
+            self.state = 6 # CUTTER_BLOCKED system state
         self.broadcast_status()
 
     def cutter_current_callback(self, msg):
@@ -212,7 +212,7 @@ class BackendROSNode(Node):
                 "percentage": round(self.battery_pct, 1),
                 "current": round(self.battery_current, 2),
                 "temperature_celsius": round(self.battery_temp, 1),
-                "charge_cycles": self.charge_cycles # 🆕 [TILFØJET: Opladningscykler fra BMS]
+                "charge_cycles": self.charge_cycles # Added: Charge cycles from BMS
             },
             "state": self.state,
             "cutter_status": self.cutter_status,
@@ -221,9 +221,9 @@ class BackendROSNode(Node):
                 "total_bms_current_ampere": round(self.battery_current, 2),
                 "drive_motors_current_ampere": round(self.drive_current, 2),
                 "cutter_motor_current_ampere": round(self.cutter_current, 2),
-                "cutter_motor_power_watts": round(self.battery_v * self.cutter_current, 1) # 🆕 [TILFØJET: Reelt effektforbrug i Watt]
+                "cutter_motor_power_watts": round(self.battery_v * self.cutter_current, 1) # Added: Actual power consumption in Watt
             },
-            "statistics": { # 🆕 [TILFØJET: Persistent kilometertæller og runtime statistik]
+            "statistics": { # Added: Persistent odometer and runtime statistics
                 "total_distance_km": round(self.total_distance_km, 2),
                 "total_runtime_hours": round(self.total_runtime_hours, 1)
             },
