@@ -13,7 +13,7 @@ class StereoNode(Node):
         self.publisher_depth = self.create_publisher(Image, '/stereo/depth_image', 10)
         self.bridge = CvBridge()
 
-        # ROS 2 Parameters with default values (Inherited dynamically from nuromow.env via launch) [UPDATED FOR DUAL-CSI]
+        # ROS 2 Parameters with default values (Inherited dynamically from omnimow.env via launch) [UPDATED FOR DUAL-CSI]
         self.declare_parameter('video_device_left', '/dev/video0')
         self.declare_parameter('video_device_right', '/dev/video1')
         self.declare_parameter('frame_id', 'camera_link')

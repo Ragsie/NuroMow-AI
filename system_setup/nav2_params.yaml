@@ -1,13 +1,13 @@
 # ==============================================================================
-# NuroMow ROS 2 Navigation2 (Nav2) Parameterkonfiguration
-# Optimeret til Radxa Dragon Q6A (Qualcomm QCS6490, 12 TOPS Hexagon NPU) & GXIVISION 3D Stereo Virtual LiDAR scan
+# OmniMow ROS 2 Navigation2 (Nav2) parameter configuration
+# Optimized for Radxa Dragon Q6A (Qualcomm QCS6490, 12 TOPS Hexagon NPU) & GXIVISION 3D Stereo Virtual LiDAR scan
 # ==============================================================================
 
 amcl:
   ros__parameters:
     use_sim_time: False
-    # Note: AMCL is disabled in NuroMow's active RTK-GPS navigation launch,
-    # da positionen leveres direkte af robot_localization (EKF) og RTK-GPS.
+    # Note: AMCL is disabled in OmniMow's active RTK-GPS navigation launch,
+    # because the position is provided directly by robot_localization (EKF) and RTK-GPS.
 
 bt_navigator:
   ros__parameters:

@@ -1,45 +1,45 @@
 #!/usr/bin/env bash
-# NuroMow Host setup for Radxa Dragon Q6A (Qualcomm QCS6490, Ubuntu 24.04 LTS / Radxa OS R2)
+# OmniMow host setup for Radxa Dragon Q6A (Qualcomm QCS6490, Ubuntu 24.04 LTS / Radxa OS R2)
 set -e
 
-echo "=== Initializing NuroMow Host Setup for Radxa Dragon Q6A ==="
+echo "=== Initializing OmniMow Host Setup for Radxa Dragon Q6A ==="
 
-# 1. Create or load the central configuration file (nuromow.env) [updated for MIPI CSI and Qualcomm]
-ENV_FILE="$(dirname "$0")/nuromow.env"
+# 1. Create or load the central configuration file (omnimow.env) [updated for MIPI CSI and Qualcomm]
+ENV_FILE="$(dirname "$0")/omnimow.env"
 if [ ! -f "$ENV_FILE" ]; then
-    echo "No nuromow.env found. Creating default configuration..."
-    sudo mkdir -p /etc/nuromow
+    echo "No omnimow.env found. Creating default configuration..."
+    sudo mkdir -p /etc/omnimow
     # Copy/create file with default values
     sudo tee "$ENV_FILE" > /dev/null << 'EOF'
-NUROMOW_TRACK_WIDTH=0.40
-NUROMOW_ROBOT_RADIUS=0.28
-NUROMOW_NAV2_INFLATION_RADIUS=0.48
+OMNIMOW_TRACK_WIDTH=0.40
+OMNIMOW_ROBOT_RADIUS=0.28
+OMNIMOW_NAV2_INFLATION_RADIUS=0.48
 
-NUROMOW_VESC_LEFT_ID=1
-NUROMOW_VESC_RIGHT_ID=2
+OMNIMOW_VESC_LEFT_ID=1
+OMNIMOW_VESC_RIGHT_ID=2
 
 # --- 3D STEREO MIPI CSI CAMERA SPECIFICATIONS ---
 # Standard baseline for IMX219 binocular is 60mm (0.06m)
-NUROMOW_CAMERA_BASELINE=0.06
-NUROMOW_CAMERA_FOCAL_LENGTH=350.0
+OMNIMOW_CAMERA_BASELINE=0.06
+OMNIMOW_CAMERA_FOCAL_LENGTH=350.0
 
 # --- SENSOR POSITIONS (URDF OFFSETS IN METERS) ---
-NUROMOW_CAMERA_HEIGHT_Z=0.10
-NUROMOW_CAMERA_OFFSET_X=0.25
-NUROMOW_CAMERA_PITCH_Y=0.0
-NUROMOW_GPS_OFFSET_X=-0.15
-NUROMOW_GPS_HEIGHT_Z=0.25
+OMNIMOW_CAMERA_HEIGHT_Z=0.10
+OMNIMOW_CAMERA_OFFSET_X=0.25
+OMNIMOW_CAMERA_PITCH_Y=0.0
+OMNIMOW_GPS_OFFSET_X=-0.15
+OMNIMOW_GPS_HEIGHT_Z=0.25
 
 # MIPI CSI camera devices (Dual IMX219 registers as separate nodes)
-NUROMOW_CAMERA_DEVICE_LEFT="/dev/video0"
-NUROMOW_CAMERA_DEVICE_RIGHT="/dev/video1"
+OMNIMOW_CAMERA_DEVICE_LEFT="/dev/video0"
+OMNIMOW_CAMERA_DEVICE_RIGHT="/dev/video1"
 
 # --- MLOPS / LOCAL NFS AI TRAINING SERVER ---
-NUROMOW_NFS_SERVER_IP=""
-NUROMOW_NFS_SHARE="/mnt/nfs/nuromow_raw"
+OMNIMOW_NFS_SERVER_IP=""
+OMNIMOW_NFS_SHARE="/mnt/nfs/omnimow_raw"
 EOF
     # Also create a symlink in /etc for easy access
-    sudo ln -sf "$(realpath "$ENV_FILE")" /etc/nuromow/nuromow.env
+    sudo ln -sf "$(realpath "$ENV_FILE")" /etc/omnimow/omnimow.env
 fi
 
 # Export variables so they are available throughout the system at runtime
@@ -60,25 +60,25 @@ sudo systemctl enable --now fastrpc || true
 
 # 2.5 Create a datamapper and configure optional NFS auto-mount for the AI training server
 echo "Configuring datamapper and filesystem..."
-sudo mkdir -p /opt/nuromow/models
-sudo mkdir -p /opt/nuromow/incoming_raw
-sudo chmod -R 777 /opt/nuromow
+sudo mkdir -p /opt/omnimow/models
+sudo mkdir -p /opt/omnimow/incoming_raw
+sudo chmod -R 777 /opt/omnimow
 
 # Create a persistent stats file on the SSD if it does not exist
-if [ ! -f /opt/nuromow/stats.json ]; then
-    echo '{"total_distance_km": 0.0, "total_runtime_hours": 0.0}' | sudo tee /opt/nuromow/stats.json > /dev/null
-    sudo chmod 777 /opt/nuromow/stats.json
+if [ ! -f /opt/omnimow/stats.json ]; then
+    echo '{"total_distance_km": 0.0, "total_runtime_hours": 0.0}' | sudo tee /opt/omnimow/stats.json > /dev/null
+    sudo chmod 777 /opt/omnimow/stats.json
 fi
 
-if [ -n "$NUROMOW_NFS_SERVER_IP" ]; then
-    echo "Local AI training server found ($NUROMOW_NFS_SERVER_IP). Configuring systemd automount in /etc/fstab..."
-    if ! grep -q "$NUROMOW_NFS_SHARE" /etc/fstab; then
+if [ -n "$OMNIMOW_NFS_SERVER_IP" ]; then
+    echo "Local AI training server found ($OMNIMOW_NFS_SERVER_IP). Configuring systemd automount in /etc/fstab..."
+    if ! grep -q "$OMNIMOW_NFS_SHARE" /etc/fstab; then
         echo "Adding mount rule to /etc/fstab..."
-        echo "${NUROMOW_NFS_SERVER_IP}:${NUROMOW_NFS_SHARE} /opt/nuromow/incoming_raw nfs defaults,noauto,x-systemd.automount,x-systemd.device-timeout=10,_netdev,rw,nofail 0 0" | sudo tee -a /etc/fstab
+        echo "${OMNIMOW_NFS_SERVER_IP}:${OMNIMOW_NFS_SHARE} /opt/omnimow/incoming_raw nfs defaults,noauto,x-systemd.automount,x-systemd.device-timeout=10,_netdev,rw,nofail 0 0" | sudo tee -a /etc/fstab
     fi
     echo "Reloading systemd and mounting NFS..."
     sudo systemctl daemon-reload || true
-    sudo mount /opt/nuromow/incoming_raw || true
+    sudo mount /opt/omnimow/incoming_raw || true
 fi
 
 # 2.6 Enable MIPI CSI device tree overlays on the Radxa board
@@ -103,7 +103,7 @@ fi
 
 # 4. Create udev rules to provide stable symbolic links to the hardware
 echo "Configuring udev rules for USB devices (ESP32, GPS)..."
-sudo tee /etc/udev/rules.d/99-nuromow.rules << 'EOF'
+sudo tee /etc/udev/rules.d/99-omnimow.rules << 'EOF'
 # ESP32 Micro-ROS Controller (CP2102 USB-to-UART)
 SUBSYSTEMS=="usb", ATTRS{idVendor}=="10c4", ATTRS{idProduct}=="ea60", SYMLINK+="ttyUSB_esp32", MODE="0666"
 

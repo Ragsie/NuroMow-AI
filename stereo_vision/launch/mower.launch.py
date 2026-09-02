@@ -7,29 +7,29 @@ def generate_launch_description():
     urdf_file = os.path.join(
         get_package_share_directory('stereo_vision'),
         'urdf',
-        'NuroMower.urdf'
+        'OmniMower.urdf'
     )
 
     with open(urdf_file, 'r') as infp:
         robot_desc = infp.read()
 
-    # Load chassis and camera specifications from environment variables (from nuromow.env) with robust fallbacks [DYNAMIC LOADING]
-    camera_x = os.getenv('NUROMOW_CAMERA_OFFSET_X', '0.25')
-    camera_z = os.getenv('NUROMOW_CAMERA_HEIGHT_Z', '0.10')
-    camera_pitch = os.getenv('NUROMOW_CAMERA_PITCH_Y', '0.0')
-    gps_x = os.getenv('NUROMOW_GPS_OFFSET_X', '-0.15')
-    gps_z = os.getenv('NUROMOW_GPS_HEIGHT_Z', '0.25')
+    # Load chassis and camera specifications from environment variables (from omnimow.env) with robust fallbacks [DYNAMIC LOADING]
+    camera_x = os.getenv('OMNIMOW_CAMERA_OFFSET_X', '0.25')
+    camera_z = os.getenv('OMNIMOW_CAMERA_HEIGHT_Z', '0.10')
+    camera_pitch = os.getenv('OMNIMOW_CAMERA_PITCH_Y', '0.0')
+    gps_x = os.getenv('OMNIMOW_GPS_OFFSET_X', '-0.15')
+    gps_z = os.getenv('OMNIMOW_GPS_HEIGHT_Z', '0.25')
 
-    device_left = os.getenv('NUROMOW_CAMERA_DEVICE_LEFT', '/dev/video0')
-    device_right = os.getenv('NUROMOW_CAMERA_DEVICE_RIGHT', '/dev/video1')
+    device_left = os.getenv('OMNIMOW_CAMERA_DEVICE_LEFT', '/dev/video0')
+    device_right = os.getenv('OMNIMOW_CAMERA_DEVICE_RIGHT', '/dev/video1')
 
-    baseline = float(os.getenv('NUROMOW_CAMERA_BASELINE', '0.06'))
-    focal_length = float(os.getenv('NUROMOW_CAMERA_FOCAL_LENGTH', '350.0'))
+    baseline = float(os.getenv('OMNIMOW_CAMERA_BASELINE', '0.06'))
+    focal_length = float(os.getenv('OMNIMOW_CAMERA_FOCAL_LENGTH', '350.0'))
 
     # DYNAMIC NAV2 PARAMETER-INJECTION FOR ASYMMETRIC CUTTER HEAD
     # To prevent the asymmetric cutter head from scraping against obstacles,
     # we load the Nav2 yaml template and replace robot_radius and inflation_radius
-    # with values directly from nuromow.env before running.
+    # with values directly from omnimow.env before running.
     nav2_template_file = os.path.join(
         get_package_share_directory('stereo_vision'),
         'config',
@@ -41,16 +41,16 @@ def generate_launch_description():
         with open(nav2_template_file, 'r') as f:
             nav2_template = f.read()
 
-        # Erstat parametre
+        # Replace parameters
         nav2_resolved = nav2_template.format(
-            ROBOT_RADIUS=os.getenv('NUROMOW_ROBOT_RADIUS', '0.28'),
-            INFLATION_RADIUS=os.getenv('NUROMOW_NAV2_INFLATION_RADIUS', '0.48')
+            ROBOT_RADIUS=os.getenv('OMNIMOW_ROBOT_RADIUS', '0.28'),
+            INFLATION_RADIUS=os.getenv('OMNIMOW_NAV2_INFLATION_RADIUS', '0.48')
         )
 
         # Save the finished runtime configuration for Nav2
         with open(resolved_nav2_file, 'w') as f:
             f.write(nav2_resolved)
-        print(f"[NuroMow Launch] Dynamic Nav2 configuration saved in {resolved_nav2_file} with inflation={os.getenv('NUROMOW_NAV2_INFLATION_RADIUS', '0.48')}m")
+        print(f"[OmniMow Launch] Dynamic Nav2 configuration saved in {resolved_nav2_file} with inflation={os.getenv('OMNIMOW_NAV2_INFLATION_RADIUS', '0.48')}m")
 
     # Replace placeholders in the URDF template dynamically at startup [DYNAMIC TEMPLATE REPLACEMENT]
     robot_desc_formatted = robot_desc.format(
@@ -70,7 +70,7 @@ def generate_launch_description():
             output='screen',
             parameters=[{'robot_description': robot_desc_formatted}]
         ),
-        # Start the central 3D Stereo Vision node (with parameters from nuromow.env) [MIGRATED TO DUAL CAM]
+        # Start the central 3D Stereo Vision node (with parameters from omnimow.env) [MIGRATED TO DUAL CAM]
         Node(
             package='stereo_vision',
             executable='stereo_node.py',

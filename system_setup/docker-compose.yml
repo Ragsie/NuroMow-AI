@@ -1,12 +1,12 @@
 version: '3.8'
 
 services:
-  # Stereo Vision Service (Virtual LiDAR scan-generering fra dual MIPI CSI)
+  # Stereo Vision Service (Virtual LiDAR scan generation from dual MIPI CSI)
   stereo_vision:
     build:
       context: ../stereo_vision
       dockerfile: Dockerfile
-    container_name: nuromow_stereo_vision
+    container_name: omnimow_stereo_vision
     restart: unless-stopped
     network_mode: host
     ipc: host
@@ -17,16 +17,16 @@ services:
     volumes:
       - /dev/shm:/dev/shm
     env_file:
-      - ./nuromow.env
+      - ./omnimow.env
     environment:
       - ROS_DOMAIN_ID=1
 
-  # ROSbridge Websocket Service (API- og App-kommunikation)
+  # ROSbridge Websocket Service (API and app communication)
   rosbridge_websocket:
     build:
       context: ../rosbridge_websocket
       dockerfile: Dockerfile
-    container_name: nuromow_rosbridge
+    container_name: omnimow_rosbridge
     restart: unless-stopped
     network_mode: host
     environment:
@@ -37,7 +37,7 @@ services:
     build:
       context: ../depth_fusion
       dockerfile: Dockerfile
-    container_name: nuromow_depth_fusion
+    container_name: omnimow_depth_fusion
     restart: unless-stopped
     network_mode: host
     ipc: host
@@ -49,20 +49,20 @@ services:
       - /dev/dri:/dev/dri
     volumes:
       - /dev/shm:/dev/shm
-      - /opt/nuromow/models:/models
-      - /opt/nuromow/incoming_raw:/incoming_raw
+      - /opt/omnimow/models:/models
+      - /opt/omnimow/incoming_raw:/incoming_raw
       - /lib/firmware:/lib/firmware:ro  # Mounts proprietary firmware blobs for Hexagon DSP
     env_file:
-      - ./nuromow.env
+      - ./omnimow.env
     environment:
       - ROS_DOMAIN_ID=1
 
-  # App Backend (Statusoversigt, GPS RTK og kontrol-broker)
+  # App Backend (status overview, GPS RTK, and control broker)
   app_backend:
     build:
       context: ../app_backend
       dockerfile: Dockerfile
-    container_name: nuromow_app_backend
+    container_name: omnimow_app_backend
     restart: unless-stopped
     network_mode: host
     devices:

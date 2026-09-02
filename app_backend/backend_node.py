@@ -13,7 +13,7 @@ import os
 import math
 import time
 
-app = FastAPI(title="NuroMow API Gateway")
+app = FastAPI(title="OmniMow API Gateway")
 clients = []
 
 class BackendROSNode(Node):
@@ -46,7 +46,7 @@ class BackendROSNode(Node):
         self.charge_cycles = 0
 
         # Added: Persistent statistics loaded from Orange Pi NVMe SSD
-        self.stats_file = "/opt/nuromow/stats.json"
+        self.stats_file = "/opt/omnimow/stats.json"
         self.total_distance_km = 0.0
         self.total_runtime_hours = 0.0
         self.load_stats()

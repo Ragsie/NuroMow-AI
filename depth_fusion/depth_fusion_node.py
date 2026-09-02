@@ -74,7 +74,7 @@ class DepthFusionNode(Node):
         # Run inference lightning-fast on Qualcomm Hexagon NPU
         outputs = self.session.run(None, {self.input_name: img_input})
 
-        # Parse og generer segmentationsmaske
+        # Parse and generate the segmentation mask
         mask = np.zeros((model_size, model_size), dtype=np.uint8)
 
         # Example Active Learning Logic:

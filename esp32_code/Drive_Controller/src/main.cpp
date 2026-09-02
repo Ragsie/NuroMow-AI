@@ -226,6 +226,7 @@ void read_drive_telemetry() {
 
 void setup() {
     Serial.begin(115200);
+    set_microros_serial_transports(Serial);
 
     // Configure Daly BMS UART (Serial2)
     Serial2.begin(9600, SERIAL_8N1, BMS_RX_PIN, BMS_TX_PIN);
@@ -238,7 +239,7 @@ void setup() {
     attachInterrupt(digitalPinToInterrupt(BUMPER_PIN), handleBumper, FALLING);
 
     init_twai();
-    set_microros_transports();
+    
 
     allocator = rcl_get_default_allocator();
     rclc_support_init(&support, 0, NULL, &allocator);
