@@ -68,6 +68,10 @@ jobs:
          python3 get-platformio.py
          echo "$HOME/.platformio/penv/bin" >> $GITHUB_PATH
       
+      - name: Tving rensning af micro-ROS cache
+        run: |
+         pio run -d ./esp32_code/Drive_controller -t clean_microros || true
+
       - name: Build Cutter Controller
         run: |
           pio run -d esp32_code/Cutter_Controller/
