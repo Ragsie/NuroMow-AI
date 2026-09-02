@@ -1,4 +1,10 @@
-- name: Prepare the PlatformIO virtual environment for micro-ROS
+- name: Installer PlatformIO Core via officiel installer (Opretter penv virtualenv)
   run: |
-    mkdir -p ~/.platformio/penv/bin
-    python3 -m venv ~/.platformio/penv
+    curl -fsSL https://raw.githubusercontent.com/platformio/platformio-core-installer/master/get-platformio.py -o get-platformio.py
+    python3 get-platformio.py
+    # Tilføj PlatformIO-miljøet til runnerens system-sti (PATH)
+    echo "$HOME/.platformio/penv/bin" >> $GITHUB_PATH
+
+- name: Byg ESP32 Firmware (micro-ROS vil nu finde virtualenv'en fejlfrit)
+  run: |
+    pio run -d ./esp32_code/Drive_controller
