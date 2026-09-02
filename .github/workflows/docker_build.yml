@@ -19,6 +19,8 @@ jobs:
       # 1. Set up QEMU to allow x86 GitHub servers to build ARM64 code
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
+        with:
+          platforms: linux/amd64,linux/arm64
         
       # 2. Set up Buildx, Docker's tool for Multi-Arch builds
       - name: Set up Docker Buildx
