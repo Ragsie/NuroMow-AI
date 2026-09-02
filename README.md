@@ -53,10 +53,10 @@ This project is built upon the fantastic work of the open-source community, but 
 While the original OpenMower project by Clemens Elflein is primarily designed to run on his custom, proprietary replacement motherboards, **this AI project is built 100% on standardized, off-the-shelf (OTS) components**. 
 
 the plan is to strip all the original electronics from a Worx lawnmower chassis and rebuilt it completely from scratch using:
-*   **Orange Pi 5 Ultra** (Main computer with hardware NPU acceleration)
+*   **Radxa Dragon Q6A** (Main computer with hardware NPU acceleration)
 *   **ESP32** & **Autoro VESC 6.7 ESCs** (Drive and cutter motor control) 
 *   **Quectel LC29H** (Budget-friendly, millimeter-precise RTK-GNSS) 
-*   **GXIVISION 3D Stereo USB Camera** (Real-time AI vision and e-stop) 
+*   **8MP IMX219 Binocular Camera** (Real-time AI vision and e-stop) 
 
 This makes our hardware platform extremely inexpensive, highly accessible, and completely independent of proprietary hardware manufacturers!
 
