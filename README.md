@@ -1,78 +1,78 @@
 # 🚜 OmniMow Autonomous Lawn Mower
 
-[![Status: ALPHA](https://img.shields.io/badge/Status-ALPHA-red.svg)](#) [![Build OmniMow Containers](https://github.com/Ragsie/OmniMow/actions/workflows/docker_build.yml/badge.svg)](https://github.com/Ragsie/OmniMow/actions/workflows/docker_build.yml) [![ROS 2](https://img.shields.io/badge/ROS_2-Humble-blue?logo=ros)](https://docs.ros.org/en/humble/index.html) [![Wiki Docs](https://img.shields.io/badge/Docs-Wiki-blue?logo=github)](https://github.com/Ragsie/OmniMow/wiki) [![CI Pipeline](https://github.com/Ragsie/OmniMow/actions/workflows/code_check.yml/badge.svg)](https://github.com/Ragsie/OmniMow/actions/workflows/code_check.yml) [![Docker Stereo-Vision](https://img.shields.io/docker/pulls/ragsie/stereo-vision?logo=docker&label=stereo-vision)](https://hub.docker.com/r/ragsie/stereo-vision) [![Docker ROSBridge](https://img.shields.io/docker/pulls/ragsie/rosbridge?logo=docker&label=ROSBridge)](https://hub.docker.com/r/ragsie/rosbridge) [![Docker AI Depth Fusion](https://img.shields.io/docker/pulls/ragsie/depth-fusion?logo=docker&label=depth-fusion)](https://hub.docker.com/r/ragsie/depth-fusion)
-
+[![Status: ALPHA](https://img.shields.io/badge/Status-ALPHA-red.svg)](#) [![Build OmniMow Containers](https://github.com/Ragsie/OmniMow/actions/workflows/docker_build.yml/badge.svg)](https://github.com/Ragsie/OmniMow/actions/workflows/docker_build.yml) [![ROS 2](https://img.shields.io/badge/ROS_2-Humble-blue?logo=ros)](https://docs.ros.org/en/humble/index.html) [![Wiki Docs](https://img.shields.io/badge/Docs-Wiki-blue?logo=github)](https://github.com/Ragsie/OmniMow/wiki) [![CI Pipeline](https://github.com/Ragsie/OmniMow/actions/workflows/code_check.yml/badge.svg)](https://github.com/Ragsie/OmniMow/actions/workflows/code_check.yml) [![Docker Stereo-Vision](https://img.shields.io/docker/pulls/ragsie/stereo-vision?logo=docker&label=stereo-vision)](https://hub.docker.com/r/ragsie/stereo-vision) [![Docker ROSBridge](https://img.shields.io/docker/pulls/ragsie/rosbridge?logo=docker&label=ROSBridge)](https://hub.docker.com/r/ragsie/rosbridge) [![Docker AI Depth Fusion](https://img.shields.io/docker/pulls/ragsie/depth-fusion?logo=docker&label=depth-fusion)](https://hub.docker.com/r/ragsie/depth-fusion) [![Docker Docking Control](https://img.shields.io/docker/pulls/ragsie/docking-control?logo=docker&label=docking-control)](https://hub.docker.com/r/ragsie/docking-control)
 
 ### 🚧 ALPHA software and hardware setup 🚧
-* damage to your equipment may occur.
+* Damage to your equipment may occur.
 
-# OmniMow AI
-Taking my old Landroid mower, and making it SMART with OmniMow AI.
+# OmniMow
+Turning my old Landroid mower into a smart autonomous robot with OmniMow AI.
 
-### The Companion App 📱 [![Build and Release OmniMow AI](https://github.com/Ragsie/OmniMow-AI_app/actions/workflows/build.yml/badge.svg)](https://github.com/Ragsie/OmniMow-AI_app/actions/workflows/build.yml)
-Control and monitor the mower in real-time with the official Flutter companion app! 
-👉 **[Get the OmniMow AI App here](https://github.com/Ragsie/OmniMow-AI_app)**
+### The Companion App 📱 [![Build and Release OmniMow AI](https://github.com/Ragsie/OmniMow_App/actions/workflows/build.yml/badge.svg)](https://github.com/Ragsie/OmniMow_App/actions/workflows/build.yml)
+Control and monitor the mower in real time with the official Flutter companion app.
+👉 **[Get the OmniMow App here](https://github.com/Ragsie/OmniMow_App)**
 
 ### Why
-This project started out of frustration: my current Worx M600 Plus has a bad habit of digging holes in my lawn instead of cutting the grass. Rather than just buying a new mower, I decided to build my own and learn a new tech stack along the way. While there are plenty of open-source DIY mowers available, my goal is to build this from the ground up to deeply understand the mechanics and software behind it. I want to learn by doing, not just by copying and pasting an existing setup.
+This project started from frustration: my current Worx M600 Plus has a habit of digging holes in the lawn instead of cutting the grass. Rather than simply buying a new mower, I decided to build my own and learn a new tech stack in the process. While there are many open-source DIY mower projects available, my goal is to build this from the ground up so I can deeply understand the mechanics and software behind it. I want to learn by doing, not just by copying someone else's setup.
 
-I'll document the whole journey here. If you have a mower tearing up your lawn too, I hope this can serve as an inspiration for your own build.
+I’ll document the whole journey here. If you have a mower that is tearing up your lawn too, I hope this project can serve as inspiration for your own build.
 
-### 🤖 OmniMow AI Architecture
-An advanced, fully autonomous lawn mower built on a Worx Landroid chassis. This project upgrades the original hardware with a modern ROS 2 (Humble/Jazzy) stack, VESC motor controllers, and real-time depth and AI vision using YOLO26n-seg retrained on a my own dataset for ultimate safety.
+### 🤖 OmniMow Architecture
+An advanced, fully autonomous lawn mower built on a Worx Landroid chassis. This project upgrades the original hardware with a modern ROS 2 (Humble/Jazzy) stack, VESC motor controllers, and real-time depth and AI vision using a YOLO26n-seg model retrained on my own dataset for maximum safety.
 
 #### 🌟 Features
-*   **ROS 2 Nav2:** Dynamic path planning and obstacle avoidance.
-*   **AI Vision:** Real-time object detection (detects humans, pets, and custom trained objects like toys and animal waste) to trigger immediate emergency stops.
-*   **Depth Vision:** A stereo camera providing visual navigation data to the mower, working in tandem with AI Vision.
-*   **VESC Motor Control:** Smooth and powerful control of the drive wheels via CAN-bus.
-*   **Micro-ROS:** Seamless communication between the main computer and the ESP32 drive controllers.
-*   **100% Dockerized:** The entire brain (ROS 2, AI, Sensor nodes) runs in isolated Docker containers for extreme reliability and instant booting.
-*   **AI Updates:** Regular AI model updates with automatic download and setup (see [wiki](https://github.com/Ragsie/OmniMow-AI/wiki)). The MowerAI is a YOLO26n-seg model, retrained on my own dataset and converted for deployment.
+* **ROS 2 Nav2:** Dynamic path planning and obstacle avoidance.
+* **AI Vision:** Real-time object detection for humans, pets, and custom-trained objects such as toys or animal waste, triggering immediate emergency stops.
+* **Depth Vision:** A stereo camera providing visual navigation data to the mower, working in tandem with AI vision.
+* **VESC Motor Control:** Smooth and powerful control of the drive wheels over CAN bus.
+* **Micro-ROS:** Seamless communication between the main computer and the ESP32 drive controllers.
+* **100% Dockerized:** The entire brain of the system—ROS 2, AI, and sensor nodes—runs in isolated Docker containers for reliability and fast startup.
+* **AI Updates:** Regular AI model updates with automatic download and setup (see [wiki](https://github.com/Ragsie/OmniMow/wiki)). The mower AI is a YOLO26n-seg model, retrained on my own dataset and converted for deployment.
 
 ---
 
 ## 📚 Documentation (Wiki)
 To keep this repository clean and easy to navigate, all detailed documentation, installation guides, parts lists, and diagrams have been moved to the **Project Wiki**.
 
-**👉 [Click here to read the full Wiki Docs](https://github.com/Ragsie/OmniMow-AI/wiki)**
+**👉 [Click here to read the full Wiki Docs](https://github.com/Ragsie/OmniMow/wiki)**
 
 In the Wiki you will find:
-* **[Bill of Materials (Hardware & Components)](https://github.com/Ragsie/OmniMow-AI/wiki/2-%F0%9F%9B%A0%EF%B8%8F-Hardware-&-Setup)**
-* **[Project Roadmap & Phases](https://github.com/Ragsie/OmniMow-AI/wiki/1-%F0%9F%9A%9C-Worx-ROS-2-Autonomous-Mower#3-pending-tasks-to-do)**
-* **[Full Installation Guide (Host & ESP32)](https://github.com/Ragsie/OmniMow-AI/wiki/4-%F0%9F%93%81-Codebase-Reference)**
-* **[System Diagrams (Power & Data Flow)](https://github.com/Ragsie/OmniMow-AI/wiki/2-%F0%9F%9B%A0%EF%B8%8F-Hardware-&-Setup#-power-distribution-power-bus)**
+* **[Bill of Materials (Hardware & Components)](https://github.com/Ragsie/OmniMow/wiki/2-%F0%9F%9B%A0%EF%B8%8F-Hardware-&-Setup)**
+* **[Project Roadmap & Phases](https://github.com/Ragsie/OmniMow/wiki/1-%F0%9F%9A%9C-OmniMow#3-pending-tasks-to-do)**
+* **[Full Installation Guide (Host & ESP32)](https://github.com/Ragsie/OmniMow/wiki/4-%F0%9F%93%81-Codebase-Reference)**
+* **[System Diagrams (Power & Data Flow)](https://github.com/Ragsie/OmniMow/wiki/2-%F0%9F%9B%A0%EF%B8%8F-Hardware-&-Setup#-power-distribution-power-bus)**
 
 ---
 
 # License, Credits & Inspiration 🛠️
 
-This project is built upon the fantastic work of the open-source community, but with a completely unique hardware philosophy.
+This project is built on the inspiration of the fantastic work of the open-source community, but with a completely unique hardware philosophy.
 
 ### 🔌 Hardware Philosophy: 100% Off-The-Shelf (DIY)
-While the original OpenMower project by Clemens Elflein is primarily designed to run on his custom, proprietary replacement motherboards, **this AI project is built 100% on standardized, off-the-shelf (OTS) components**. 
+While the original OpenMower project by Clemens Elflein is primarily designed to run on custom proprietary replacement motherboards, **this AI project is built 100% on standardized, off-the-shelf (OTS) components**.
 
-the plan is to strip all the original electronics from a Worx lawnmower chassis and rebuilt it completely from scratch using:
-*   **Radxa Dragon Q6A** (Main computer with hardware NPU acceleration)
-*   **ESP32** & **Autoro VESC 6.7 ESCs** (Drive and cutter motor control) 
-*   **Quectel LC29H** (Budget-friendly, millimeter-precise RTK-GNSS) 
-*   **8MP IMX219 Binocular Camera** (Real-time AI vision and e-stop) 
+The plan is to strip all the original electronics from a Worx lawn mower chassis and rebuild it completely from scratch using:
+* **Radxa Dragon Q6A** (main computer with hardware NPU acceleration)
+* **ESP32** & **Autoro VESC 6.7 ESCs** (drive and cutter motor control)
+* **Quectel LC29H** (budget-friendly, millimeter-precise RTK-GNSS)
+* **8MP IMX219 Binocular Camera** (real-time AI vision and emergency stop)
 
-This makes our hardware platform extremely inexpensive, highly accessible, and completely independent of proprietary hardware manufacturers!
+This makes our hardware platform extremely affordable, highly accessible, and fully independent of proprietary hardware manufacturers.
 
 ### 🤝 Acknowledgement of Software & Concepts
-Although the hardware architecture is OFF the shelf components, I would like to send a huge thank you to the projects that have inspired us and provided the software building blocks we use under the hood:
+Although the hardware architecture uses off-the-shelf components, I would like to send a huge thank you to the projects that inspired us and provided the software building blocks we use under the hood:
 
-*   **[OpenMower](https://github.com/ClemensElflein/OpenMower) by Clemens Elflein:** For the pioneering concept of converting Worx chassises into RTK-guided ROS robots (licensed under GPL-3.0)
-*   **[YOLO26n-seg by Ultralytics](https://github.com/ultralytics/ultralytics):** For the lightning-fast AI segmentation system running locally on the NPU (licensed under AGPL-3.0)
-*   **[ROS 2 (Robot Operating System)](https://www.ros.org/):** The robust middleware framework driving our entire messaging and node architecture (licensed under Apache 2.0) 
-*   **[micro-ROS](https://micro.ros.org/):** For bringing ROS 2 seamlessly onto our ESP32 microcontroller (licensed under Apache 2.0)
+* **[OpenMower](https://github.com/ClemensElflein/OpenMower) by Clemens Elflein:** For pioneering the concept of converting Worx chassis into RTK-guided ROS robots (licensed under GPL-3.0)
+* **[YOLO26n-seg by Ultralytics](https://github.com/ultralytics/ultralytics):** For the lightning-fast AI segmentation system running locally on the NPU (licensed under AGPL-3.0)
+* **[ROS 2 (Robot Operating System)](https://www.ros.org/):** The robust middleware framework driving our entire messaging and node architecture (licensed under Apache 2.0)
+* **[micro-ROS](https://micro.ros.org/):** For bringing ROS 2 seamlessly onto our ESP32 microcontroller (licensed under Apache 2.0)
 
 ---
 
 ## ☕ Support The Project
-If this project helped you or inspired your own build, consider buying me a cup of coffee. It would make my day and support me in developing more!
-please note that this project is, and will always remain, **100% free and open-source** under the **GNU GPLv3 License** in accordance with the licenses of our upstream dependencies.
+If this project helped you or inspired your own build, consider buying me a cup of coffee. It would mean a lot and would support me in developing more.
+
+Please note that this project is, and will always remain, **100% free and open-source** under the **GNU GPLv3 License**, in accordance with the licenses of our upstream dependencies.
 
 [![Buy Me A Coffee](https://img.buymeacoffee.com/button-api/?text=Buy%20me%20a%20coffee&emoji=&slug=ragsie&button_colour=FFDD00&font_colour=000000&font_family=Cookie&outline_colour=000000&coffee_colour=ffffff)](https://buymeacoffee.com/ragsie)
 

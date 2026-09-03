@@ -63,7 +63,7 @@ jobs:
           push: true
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/app-backend:latest
 
-      # 7. Build and push the omnimow-seg.rknn depth node
+      # 7. Build and push the omnimow-seg.onnx depth node
       - name: Build and push Depth Fusion Node
         uses: docker/build-push-action@v5
         with:
@@ -72,3 +72,13 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: true
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/depth-fusion:latest
+
+      # 7. Build and push the omnimow-seg.onnx depth node
+      - name: Build and push Auto Docking Control Node
+        uses: docker/build-push-action@v5
+        with:
+          context: ./docking_control
+          file: ./docking_control/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/docking-control:latest

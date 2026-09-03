@@ -57,7 +57,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Indlæs OmniMow miljøvariabler fra omnimow.env til GitHub Actions
+      - name: Load OmniMow environment variables from omnimow.env into GitHub Actions
         run: |
          grep -v '^#' system_setup/omnimow.env >> $GITHUB_ENV
 
@@ -66,13 +66,13 @@ jobs:
         with:
           python-version: '3.10'
 
-      - name: Installer PlatformIO Core
+      - name: Install PlatformIO Core
         run: |
          curl -fsSL https://raw.githubusercontent.com/platformio/platformio-core-installer/master/get-platformio.py -o get-platformio.py
          python3 get-platformio.py
          echo "$HOME/.platformio/penv/bin" >> $GITHUB_PATH
       
-      - name: Tving rensning af micro-ROS cache
+      - name: Force cleaning of the micro-ROS cache
         run: |
          pio run -d ./esp32_code/Drive_controller -t clean_microros || true
 
@@ -91,7 +91,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Test Docker build for yolo ai node
+      - name: Test Docker build for stereo_vision
         run: |
-         # build YOLO safty Dockerfile
+         # build stereo_vision Dockerfile
          docker build -t second-docker-test -f stereo_vision/Dockerfile stereo_vision/

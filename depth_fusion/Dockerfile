@@ -1,5 +1,8 @@
 FROM ubuntu:24.04
 
+# make sure to run without interactive prompts under installation
+ENV DEBIAN_FRONTEND=noninteractive
+
 # Install basic Python environment and OpenCV
 RUN apt-get update && apt-get install -y \
     python3-pip \
@@ -7,11 +10,15 @@ RUN apt-get update && apt-get install -y \
     python3-numpy \
     wget \
     software-properties-common \
-    libgoogle-glog5t64 \
+    libgoogle-glog-dev \
+    libc++-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# QUALCOMM ONNX RUNTIME NPU ACCELERATION: Install onnxruntime and the official onnxruntime-qnn plugin
-RUN pip3 install --no-cache-dir onnxruntime onnxruntime-qnn --break-system-packages
+# [QUALCOMM NATIVE SNPE ENVIRONMENT CONFIGURATION]
+ENV SNPE_ROOT=/opt/qcom/snpe
+ENV PATH="${SNPE_ROOT}/bin/x86_64-linux-clang:${PATH}"
+ENV LD_LIBRARY_PATH="${SNPE_ROOT}/lib/x86_64-linux-clang:${SNPE_ROOT}/lib:${LD_LIBRARY_PATH}"
+ENV PYTHONPATH="${SNPE_ROOT}/lib/python:${PYTHONPATH}"
 
 # Set up and install ROS 2 Jazzy (standard on Ubuntu 24.04) or Humble libraries for ARM64
 RUN add-apt-repository universe && \

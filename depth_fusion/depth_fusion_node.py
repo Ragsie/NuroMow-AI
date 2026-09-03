@@ -9,6 +9,13 @@ import os
 import time
 import onnxruntime as ort
 
+#[QUALCOMM NATIVE SNPE SDK IMPORT]
+try:
+    import snpe
+    HAS_SNPE = True
+except ImportError:
+    HAS_SNPE = False
+
 class DepthFusionNode(Node):
     def __init__(self):
         super().__init__('depth_fusion_node')
@@ -58,6 +65,40 @@ class DepthFusionNode(Node):
             self.image_callback,
             10
         )
+
+        #[QUALCOMM NATIVE SNPE RUNTIME INITIALISERING]
+        if HAS_SNPE:
+            try:
+                # create Qualcomm SNPE container builder
+                builder = snpe.SNPEBuilder(self.model_path)
+
+                # configure to run 100% on Hexagon HTP/DSP (NPU) for maximum performance and power saving! [cite: 7, 8]
+                builder.set_runtime_processor(snpe.Runtime.DSP)
+
+                # Build the native execution thread
+                self.snpe_runtime = builder.build()
+                self.get_logger().info("Qualcomm Hexagon NPU (12 TOPS) accelerated native SNPE session started!")
+            except Exception as e:
+                self.get_logger().error(f"Error creating native SNPE session: {str(e)}. Fallback to CPU...")
+                try:
+                    builder = snpe.SNPEBuilder(self.model_path)
+                    builder.set_runtime_processor(snpe.Runtime.CPU)
+                    self.snpe_runtime = builder.build()
+                except Exception as ex:
+                    self.get_logger().error(f"Fatal error: Could not load model on CPU: {str(ex)}")
+                    self.snpe_runtime = None
+        else:
+            self.get_logger().error("Qualcomm SNPE Python SDK bindings not found! Check PYTHONPATH in your Docker container.")
+            self.snpe_runtime = None
+
+        # Subscribe to the synchronized left source image
+        self.subscription = self.create_subscription(
+            Image,
+            '/stereo/left/image_raw',
+            self.image_callback,
+            10
+        )
+
 
     def image_callback(self, msg):
         cv_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding='bgr8')

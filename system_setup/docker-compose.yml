@@ -51,6 +51,7 @@ services:
       - /dev/shm:/dev/shm
       - /opt/omnimow/models:/models
       - /opt/omnimow/incoming_raw:/incoming_raw
+      - /opt/qcom/snpe:/opt/qcom/snpe
       - /lib/firmware:/lib/firmware:ro  # Mounts proprietary firmware blobs for Hexagon DSP
     env_file:
       - ./omnimow.env
@@ -67,5 +68,17 @@ services:
     network_mode: host
     devices:
       - /dev/ttyUSB_gps_rover:/dev/ttyUSB_gps_rover
+    environment:
+      - ROS_DOMAIN_ID=1
+
+  docking_control:
+    build:
+      context: ../docking_control
+      dockerfile: Dockerfile
+      container_name: omnimow_docking_control
+      restart: unless-stopped
+      network_mode: host
+    env_file:
+      - ./omnimow.env
     environment:
       - ROS_DOMAIN_ID=1
