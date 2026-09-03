@@ -1,4 +1,4 @@
-name: OmniMow Kodekvalitet og Statisk Analyse
+name: OmniMow Code Quality and Static Analysis
 
 on:
   push:
@@ -10,37 +10,36 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-    - name: Hent kildekode (Checkout)
+    - name: Checkout source code
       uses: actions/checkout@v4
 
-    - name: Indlæs OmniMow miljøvariabler fra omnimow.env til GitHub Actions
+    - name: Load OmniMow environment variables from omnimow.env into GitHub Actions
       run: |
         grep -v '^#' system_setup/omnimow.env >> $GITHUB_ENV
 
-    - name: Opsæt Python Miljø
+    - name: Set up Python environment
       uses: actions/setup-python@v5
       with:
         python-version: '3.10'
-        cache: 'pip' # Aktiverer automatisk caching af pip-pakker
 
-    - name: Installer testværktøjer og static analyzers
+    - name: Install testing tools and static analyzers
       run: |
         python -m pip install --upgrade pip
         pip install flake8
         sudo apt-get update && sudo apt-get install -y cppcheck shellcheck
 
-    - name: Python Statisk Analyse (flake8)
+    - name: Python static analysis (flake8)
       run: |
-        # Stop processen ved syntaksfejl eller udefinerede variabler i de aktive Python-moduler
+        # Stop on syntax errors or undefined variables in the active Python modules
         flake8 stereo_vision/ depth_fusion/ docking_control/ app_backend/ --count --select=E9,F63,F7,F82 --show-source --statistics
-        # Advarsler og stilmæssig kontrol (Resten af koden)
+        # Warnings and style checks (remaining code)
         flake8 stereo_vision/ depth_fusion/ docking_control/ app_backend/ --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
 
-    - name: C++ Firmware Analyse (cppcheck)
+    - name: C++ firmware analysis (cppcheck)
       run: |
         cppcheck --enable=all --suppress=missingIncludeSystem ./esp32_code/
 
-    - name: Shell Script Analyse (shellcheck)
+    - name: Shell script analysis (shellcheck)
       run: |
-        # Statisk analyse af robottens opsætnings- og startscripts
+        # Static analysis of the robot's setup and startup scripts
         shellcheck system_setup/host_setup.sh stereo_vision/start_vision.sh

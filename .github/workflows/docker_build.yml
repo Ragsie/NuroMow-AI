@@ -1,4 +1,4 @@
-name: OmniMow Docker Build og Udgivelse
+name: OmniMow Docker Build and Release
 
 on:
   push:
@@ -12,28 +12,32 @@ jobs:
       matrix:
         service: [stereo_vision, depth_fusion, docking_control, app_backend, rosbridge_websocket]
     steps:
-    - name: Hent kildekode (Checkout)
+    - name: Checkout source code
       uses: actions/checkout@v4
 
-    - name: Opsæt QEMU (Muliggør cross-compilation til arm64)
+    - name: Convert repository path to lowercase
+      run: |
+        echo "REPO_LC=${GITHUB_REPOSITORY,,}" >> ${GITHUB_ENV}
+
+    - name: Set up QEMU (enables cross-compilation to arm64)
       uses: docker/setup-qemu-action@v3
 
-    - name: Opsæt Docker Buildx
+    - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
 
-    - name: Log ind på GHCR (GitHub Container Registry)
+    - name: Log in to GHCR (GitHub Container Registry)
       uses: docker/login-action@v3
       with:
         registry: ghcr.io
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Compiler og udgiv ${{ matrix.service }} Docker Image
+    - name: Build and release ${{ matrix.service }} Docker image
       uses: docker/build-push-action@v5
       with:
         context: ./${{ matrix.service }}
         platforms: linux/arm64
         push: true
-        tags: ghcr.io/${{ github.repository }}/${{ matrix.service }}:latest
+        tags: ghcr.io/${{ env.REPO_LC }}/${{ matrix.service }}:latest
         cache-from: type=gha
         cache-to: type=gha,mode=max
