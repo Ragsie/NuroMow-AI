@@ -1,84 +1,39 @@
-name: Build and Push Multi-Arch Docker Images
+name: OmniMow Docker Build og Udgivelse
 
 on:
   push:
     branches: [ "main" ]
-    # Only run the build process if code in these directories has changed
-    paths:
-      - 'stereo_vision_node/**'
-      - 'rosbridge_websocket/**'
-      - '.github/workflows/docker_build.yml'
 
 jobs:
-  build-and-push:
+  build-images:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        service: [stereo_vision, depth_fusion, docking_control, app_backend, rosbridge_websocket]
     steps:
-      - name: Check out repository
-        uses: actions/checkout@v4
+    - name: Hent kildekode (Checkout)
+      uses: actions/checkout@v4
 
-      # 1. Set up QEMU to allow x86 GitHub servers to build ARM64 code
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-        with:
-          platforms: linux/amd64,linux/arm64
-        
-      # 2. Set up Buildx, Docker's tool for Multi-Arch builds
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+    - name: Opsæt QEMU (Muliggør cross-compilation til arm64)
+      uses: docker/setup-qemu-action@v3
 
-      # 3. Log in to Docker Hub (Remember to configure Secrets in GitHub repo settings!)
-      - name: Log in to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+    - name: Opsæt Docker Buildx
+      uses: docker/setup-buildx-action@v3
 
-      # 4. Build and push the Stereo Vision Node
-      - name: Build and push Stereo Vision Node
-        uses: docker/build-push-action@v5
-        with:
-          context: ./stereo_vision
-          file: ./stereo_vision/Dockerfile
-          # THE MAGIC: Builds for BOTH your PC (amd64) and your robot (arm64)
-          platforms: linux/amd64,linux/arm64
-          push: true # <--- This automatically uploads the image to Docker Hub
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/stereo-vision:latest
+    - name: Log ind på GHCR (GitHub Container Registry)
+      uses: docker/login-action@v3
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
 
-      # 5. Build and push the Rosbridge WebSocket Node
-      - name: Build and push Rosbridge
-        uses: docker/build-push-action@v5
-        with:
-          context: ./rosbridge_websocket
-          file: ./rosbridge_websocket/Dockerfile
-          platforms: linux/amd64,linux/arm64
-          push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/rosbridge:latest
-
-      # 6. Build and push the App Backend Node
-      - name: Build and push App Backend Node
-        uses: docker/build-push-action@v5
-        with:
-          context: ./app_backend
-          platforms: linux/amd64,linux/arm64
-          push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/app-backend:latest
-
-      # 7. Build and push the omnimow-seg.onnx depth node
-      - name: Build and push Depth Fusion Node
-        uses: docker/build-push-action@v5
-        with:
-          context: ./depth_fusion
-          file: ./depth_fusion/Dockerfile
-          platforms: linux/amd64,linux/arm64
-          push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/depth-fusion:latest
-
-      # 7. Build and push the omnimow-seg.onnx depth node
-      - name: Build and push Auto Docking Control Node
-        uses: docker/build-push-action@v5
-        with:
-          context: ./docking_control
-          file: ./docking_control/Dockerfile
-          platforms: linux/amd64,linux/arm64
-          push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/docking-control:latest
+    - name: Compiler og udgiv ${{ matrix.service }} Docker Image
+      uses: docker/build-push-action@v5
+      with:
+        context: ./${{ matrix.service }}
+        platforms: linux/arm64
+        push: true
+        tags: ghcr.io/${{ github.repository }}/${{ matrix.service }}:latest
+        cache-from: type=gha
+        cache-to: type=gha,mode=max

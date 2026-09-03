@@ -1,9 +1,14 @@
-FROM ros:humble-ros-base
+FROM ros:humble-ros-core-jammy
+
+RUN [ -f /sbin/ldconfig ] && mv /sbin/ldconfig /sbin/ldconfig.real && ln -s /bin/true /sbin/ldconfig || true
 
 RUN apt-get update && apt-get install -y \
-    ros-humble-rosbridge-server \
+    ros-humble-rosbridge-suite \
     && rm -rf /var/lib/apt/lists/*
 
-# Start the websocket server on the default port (9090)
-# NOTE: The bridge exposes ROS topics to web clients; ensure the firewall and network policy allow the required traffic.
-CMD ["ros2", "launch", "rosbridge_server", "rosbridge_websocket_launch.xml"]
+RUN [ -f /sbin/ldconfig.real ] && rm /sbin/ldconfig && mv /sbin/ldconfig.real /sbin/ldconfig && ldconfig || true
+
+
+EXPOSE 8000
+
+CMD ["ros2", "launch", "rosbridge_server", "rosbridge_websocket_launch.xml", "port:=8000"]

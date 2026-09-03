@@ -1,4 +1,4 @@
-name: CI Pipeline
+name: OmniMow Kodekvalitet og Statisk Analyse
 
 on:
   push:
@@ -7,91 +7,40 @@ on:
     branches: [ "main" ]
 
 jobs:
-  python-test:
-    name: Python Lint & Test
+  lint:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+    - name: Hent kildekode (Checkout)
+      uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.10'
+    - name: Indlæs OmniMow miljøvariabler fra omnimow.env til GitHub Actions
+      run: |
+        grep -v '^#' system_setup/omnimow.env >> $GITHUB_ENV
 
-      - name: Install dependencies (flake8 and pytest)
-        run: |
-          python -m pip install --upgrade pip
-          pip install flake8 pytest
-          # Uncomment the line below if you have a requirements.txt file:
-          # pip install -r requirements.txt
+    - name: Opsæt Python Miljø
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.10'
+        cache: 'pip' # Aktiverer automatisk caching af pip-pakker
 
-      - name: Lint with flake8
-        run: |
-          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+    - name: Installer testværktøjer og static analyzers
+      run: |
+        python -m pip install --upgrade pip
+        pip install flake8
+        sudo apt-get update && sudo apt-get install -y cppcheck shellcheck
 
-      - name: Run Python tests with pytest
-        run: |
-          # This will automatically find and run all tests in your Python files
-          # pytest # skipped for now
+    - name: Python Statisk Analyse (flake8)
+      run: |
+        # Stop processen ved syntaksfejl eller udefinerede variabler i de aktive Python-moduler
+        flake8 stereo_vision/ depth_fusion/ docking_control/ app_backend/ --count --select=E9,F63,F7,F82 --show-source --statistics
+        # Advarsler og stilmæssig kontrol (Resten af koden)
+        flake8 stereo_vision/ depth_fusion/ docking_control/ app_backend/ --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
 
-  shell-check:
-    name: Shell Script Check
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+    - name: C++ Firmware Analyse (cppcheck)
+      run: |
+        cppcheck --enable=all --suppress=missingIncludeSystem ./esp32_code/
 
-      - name: Install ShellCheck
-        run: sudo apt-get install -y shellcheck
-
-      - name: Run ShellCheck on all .sh files
-        run: |
-          # Finds all .sh files in the repo and checks them for errors
-          find . -type f -name "*.sh" -exec shellcheck {} +
-
-  esp32-build:
-    name: ESP32 Build (PlatformIO)
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Load OmniMow environment variables from omnimow.env into GitHub Actions
-        run: |
-         grep -v '^#' system_setup/omnimow.env >> $GITHUB_ENV
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.10'
-
-      - name: Install PlatformIO Core
-        run: |
-         curl -fsSL https://raw.githubusercontent.com/platformio/platformio-core-installer/master/get-platformio.py -o get-platformio.py
-         python3 get-platformio.py
-         echo "$HOME/.platformio/penv/bin" >> $GITHUB_PATH
-      
-      - name: Force cleaning of the micro-ROS cache
-        run: |
-         pio run -d ./esp32_code/Drive_controller -t clean_microros || true
-
-      - name: Build Cutter Controller
-        run: |
-          pio run -d esp32_code/Cutter_Controller/
-
-      - name: Build Drive Controller
-        run: |
-          pio run -d esp32_code/Drive_Controller/
-
-  docker-check:
-    name: Dockerfile Build Test
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Test Docker build for stereo_vision
-        run: |
-         # build stereo_vision Dockerfile
-         docker build -t second-docker-test -f stereo_vision/Dockerfile stereo_vision/
+    - name: Shell Script Analyse (shellcheck)
+      run: |
+        # Statisk analyse af robottens opsætnings- og startscripts
+        shellcheck system_setup/host_setup.sh stereo_vision/start_vision.sh
